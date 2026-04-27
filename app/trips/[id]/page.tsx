@@ -1,0 +1,492 @@
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { MapPin, Calendar, Users, Wallet, Share, Download, Trash2, Edit2, MessageSquare, Clock, Coffee, UtensilsCrossed, Moon, TrendingUp, RefreshCw, BedDouble, ExternalLink, Plane, TrainFront, Bus } from "lucide-react";
+import ItineraryMap from "@/components/map/ItineraryMap";
+import DestinationGallery from "@/components/ui/DestinationGallery";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { usePlannerStore } from "@/store/plannerStore";
+
+// Price tier colors based on repetition count (works for any currency symbol)
+function getPriceColor(priceRange: string): string {
+  const count = priceRange?.length || 1;
+  if (count >= 3) return "text-coral";
+  if (count === 2) return "text-amber";
+  return "text-emerald-500";
+}
+
+// Resolve currency symbol from code — covers any destination
+function getCurrencySymbol(code: string): string {
+  const map: Record<string, string> = {
+    INR: "₹", JPY: "¥", GBP: "£", EUR: "€", AUD: "A$", CAD: "CA$",
+    CNY: "¥", THB: "฿", SGD: "S$", AED: "AED ", MXN: "MX$", BRL: "R$",
+    KRW: "₩", CHF: "CHF ", NZD: "NZ$", SEK: "kr", NOK: "kr", DKK: "kr",
+    IDR: "Rp", MYR: "RM", VND: "₫", TRY: "₺", SAR: "﷼", ZAR: "R",
+    PHP: "₱", HKD: "HK$", USD: "$",
+  };
+  return map[code?.toUpperCase()] || "$";
+}
+
+export default function TripPage() {
+  const [activeId, setActiveId] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState<"itinerary" | "restaurants" | "budget">("itinerary");
+  const [regeneratingDay, setRegeneratingDay] = useState<number | null>(null);
+  const { step, setStep, currentItinerary, updateDay, language } = usePlannerStore();
+
+  if (!currentItinerary) {
+    return (
+      <div className="min-h-screen bg-ivory dark:bg-[#0A0F1C] flex items-center justify-center font-body">
+        <div className="text-center">
+          <h1 className="text-2xl font-display font-bold mb-4">No Trip Found</h1>
+          <Button onClick={() => window.location.href = '/plan'}>Start Planning</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      alert("Link copied to clipboard!");
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
+  };
+
+  const handlePrint = () => { window.print(); };
+
+  const handleBookHotels = () => {
+    const dest = encodeURIComponent(currentItinerary.user_destination || "");
+    window.open(`https://www.booking.com/searchresults.html?ss=${dest}`, "_blank");
+  };
+
+  const handleBookFlights = () => {
+    const dest = encodeURIComponent(currentItinerary.user_destination || "");
+    window.open(`https://www.skyscanner.net/transport/flights-from/anywhere/to/${dest}`, "_blank");
+  };
+
+  const handleBookTrains = () => {
+    const dest = encodeURIComponent(currentItinerary.user_destination || "");
+    window.open(`https://www.google.com/search?q=trains+to+${dest}`, "_blank");
+  };
+
+  const handleBookBus = () => {
+    const dest = encodeURIComponent(currentItinerary.user_destination || "");
+    window.open(`https://www.redbus.in/search?toCityName=${dest}`, "_blank");
+  };
+
+  const handleRegenerateDay = async (dayNumber: number, previousTheme: string) => {
+    setRegeneratingDay(dayNumber);
+    try {
+      const res = await fetch("/api/trips/regenerate-day", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destination: currentItinerary.user_destination,
+          dayNumber,
+          budget: currentItinerary.user_budget,
+          tripTypes: currentItinerary.user_tripTypes,
+          companions: currentItinerary.user_companions,
+          geo: currentItinerary.destinationCoordinates,
+          currency: { code: currentItinerary.estimatedTotalCost?.currency, symbol: currentItinerary.estimatedTotalCost?.currencySymbol },
+          previousTheme,
+          language
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.day) {
+        updateDay(dayNumber, data.day);
+      } else {
+        alert("Failed to regenerate day. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error regenerating day.");
+    } finally {
+      setRegeneratingDay(null);
+    }
+  };
+
+  // Extract all activities and restaurants for the map
+  const allActivities = currentItinerary.days?.flatMap((day: any) => day.activities) || [];
+  const mapMarkers = [
+    ...allActivities.map((a: any) => ({ ...a, type: 'activity' })),
+    ...(currentItinerary.recommendedRestaurants || currentItinerary.restaurantRecommendations || []).map((r: any, i: number) => ({
+      ...r,
+      id: `rest_${i}`,
+      category: 'food',
+      type: 'restaurant',
+      time: "🍽️"
+    }))
+  ];
+  
+  // ALWAYS use geocoded destinationCoordinates first — this is set client-side during generation
+  const mapCenter = (
+    currentItinerary.destinationCoordinates?.lat && currentItinerary.destinationCoordinates?.lng
+      ? currentItinerary.destinationCoordinates
+      : allActivities.find((a: any) => a.coordinates?.lat)?.coordinates
+  ) || { lat: 48.8566, lng: 2.3522 }; // Paris as last-resort (neutral default)
+
+  const cost = currentItinerary.estimatedTotalCost;
+  const restaurants = currentItinerary.recommendedRestaurants || [];
+  // Derive currency symbol — prefer explicit currencySymbol, then derive from currency code
+  const currCode = cost?.currency || "USD";
+  const sym = cost?.currencySymbol || getCurrencySymbol(currCode);
+
+  return (
+    <div className="min-h-screen bg-ivory dark:bg-[#0A0F1C] text-midnight dark:text-ivory font-body pb-24">
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
+
+          {/* ── Left Sticky Panel ── */}
+          <div className="w-full lg:w-1/3">
+            <div className="sticky top-8 flex flex-col gap-6">
+
+              {/* Dynamic Destination Gallery */}
+              <DestinationGallery destination={currentItinerary.user_destination} />
+
+              <div className="flex flex-col gap-3">
+                <h1 className="text-3xl font-display font-bold leading-tight">{currentItinerary.tripTitle || currentItinerary.user_destination}</h1>
+                <div className="flex flex-wrap gap-2">
+                  {currentItinerary.user_tripTypes?.map((type: string) => (
+                    <Badge key={type}>{type}</Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Key Stats */}
+              <div className="grid grid-cols-2 gap-3 bg-white dark:bg-midnight/50 p-5 rounded-2xl border border-ivory/20 shadow-sm">
+                <div className="flex flex-col gap-1">
+                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><Calendar className="w-3 h-3"/> Dates</span>
+                  <span className="font-semibold text-sm">{currentItinerary.user_dates}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><MapPin className="w-3 h-3"/> Location</span>
+                  <span className="font-semibold text-sm">{currentItinerary.user_destination}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><Users className="w-3 h-3"/> Travelers</span>
+                  <span className="font-semibold text-sm capitalize">{currentItinerary.user_companions}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><Wallet className="w-3 h-3"/> Budget</span>
+                  <span className="font-semibold text-sm capitalize">{currentItinerary.user_budget}</span>
+                </div>
+              </div>
+
+              {/* Budget Estimate Summary */}
+              {cost && (
+                <div className="bg-gradient-to-br from-amber/10 to-coral/10 border border-amber/20 p-5 rounded-2xl">
+                  <h3 className="font-semibold text-sm uppercase tracking-wider text-amber mb-3 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" /> Estimated Budget
+                  </h3>
+                  <p className="text-2xl font-display font-bold mb-1">
+                    {sym}{cost.min.toLocaleString()} – {sym}{cost.max.toLocaleString()}
+                    <span className="text-sm font-normal text-midnight/50 dark:text-ivory/50 ml-1">{currCode}</span>
+                  </p>
+                  <p className="text-xs text-midnight/60 dark:text-ivory/60 mb-4">
+                    ~{sym}{cost.perDayMin?.toLocaleString()}–{sym}{cost.perDayMax?.toLocaleString()}/day
+                  </p>
+                  <div className="space-y-2">
+                    {cost.breakdown && Object.entries(cost.breakdown).map(([key, val]: [string, any]) => (
+                      <div key={key} className="flex justify-between text-xs">
+                        <span className="capitalize text-midnight/60 dark:text-ivory/60">{key}</span>
+                        <span className="font-semibold">{sym}{val.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {cost.budgetTips?.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-amber/20">
+                      <p className="text-xs font-semibold text-amber mb-2">Money-Saving Tips</p>
+                      <ul className="space-y-1">
+                        {cost.budgetTips.map((tip: string, i: number) => (
+                          <li key={i} className="text-xs text-midnight/70 dark:text-ivory/70 flex gap-2"><span>💡</span>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-3">
+                <Button variant="outline" className="flex-1 gap-2" onClick={handleShare}><Share className="w-4 h-4"/> Share</Button>
+                <Button variant="outline" className="flex-1 gap-2" onClick={handlePrint}><Download className="w-4 h-4"/> PDF</Button>
+                <Button className="w-full gap-2 bg-gradient-to-r from-amber to-coral hover:opacity-90 border-0" onClick={handleBookHotels}>
+                  <BedDouble className="w-4 h-4" /> Book Hotels <ExternalLink className="w-3 h-3 opacity-70 ml-auto" />
+                </Button>
+              </div>
+
+              {/* Book Tickets Section */}
+              <div className="bg-white dark:bg-midnight/50 p-5 rounded-2xl border border-ivory/20 shadow-sm flex flex-col gap-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-midnight/40 dark:text-ivory/40">Book Tickets</h3>
+                <div className="grid grid-cols-1 gap-2">
+                  <Button variant="outline" className="justify-start gap-3 h-12 border-ivory/20 hover:bg-amber/5 hover:border-amber/40 transition-all" onClick={handleBookFlights}>
+                    <div className="w-8 h-8 rounded-lg bg-cyan-400/10 flex items-center justify-center text-cyan-400">
+                      <Plane className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Flights</span>
+                      <span className="text-[10px] opacity-60">Skyscanner / Google Flights</span>
+                    </div>
+                    <ExternalLink className="w-3 h-3 opacity-40 ml-auto" />
+                  </Button>
+
+                  <Button variant="outline" className="justify-start gap-3 h-12 border-ivory/20 hover:bg-amber/5 hover:border-amber/40 transition-all" onClick={handleBookTrains}>
+                    <div className="w-8 h-8 rounded-lg bg-violet-400/10 flex items-center justify-center text-violet-400">
+                      <TrainFront className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Trains</span>
+                      <span className="text-[10px] opacity-60">Search Rail / IRCTC</span>
+                    </div>
+                    <ExternalLink className="w-3 h-3 opacity-40 ml-auto" />
+                  </Button>
+
+                  <Button variant="outline" className="justify-start gap-3 h-12 border-ivory/20 hover:bg-amber/5 hover:border-amber/40 transition-all" onClick={handleBookBus}>
+                    <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center text-amber-400">
+                      <Bus className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold">Bus</span>
+                      <span className="text-[10px] opacity-60">RedBus / Local Travel</span>
+                    </div>
+                    <ExternalLink className="w-3 h-3 opacity-40 ml-auto" />
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* ── Right Main Panel ── */}
+          <div className="w-full lg:w-2/3 flex flex-col gap-8">
+
+            {/* Tab Switcher */}
+            <div className="flex gap-2 bg-white dark:bg-midnight/50 p-2 rounded-2xl border border-ivory/20 shadow-sm">
+              {[
+                { id: "itinerary", label: "Itinerary" },
+                { id: "restaurants", label: "🍽️ Restaurants" },
+                { id: "budget", label: "💰 Budget" },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.id ? "bg-amber text-white shadow-md" : "hover:bg-amber/10 text-midnight/60 dark:text-ivory/60"}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── ITINERARY TAB ── */}
+            {activeTab === "itinerary" && (
+              <>
+                {/* Trip Overview */}
+                <div className="bg-white dark:bg-midnight/50 rounded-3xl border border-ivory/20 p-8 shadow-sm">
+                  <h3 className="text-xl font-bold font-display mb-3">Trip Overview</h3>
+                  <p className="text-midnight/80 dark:text-ivory/80 leading-relaxed mb-6">{currentItinerary.summary}</p>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold text-amber mb-2 text-sm uppercase tracking-wider">Highlights</h4>
+                      <ul className="list-disc list-inside text-sm text-midnight/70 dark:text-ivory/70 space-y-1">
+                        {currentItinerary.highlights?.map((h: string, i: number) => <li key={i}>{h}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-amber mb-2 text-sm uppercase tracking-wider">Packing Essentials</h4>
+                      <ul className="list-disc list-inside text-sm text-midnight/70 dark:text-ivory/70 space-y-1">
+                        {currentItinerary.packingEssentials?.map((p: string, i: number) => <li key={i}>{p}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Day-by-Day Timeline */}
+                {currentItinerary.days?.map((day: any) => (
+                  <div key={day.dayNumber} className="bg-white dark:bg-midnight/50 rounded-3xl border border-amber/10 shadow-xl overflow-hidden">
+                    <div className="bg-gradient-to-r from-amber to-coral p-6 text-white flex justify-between items-start">
+                      <div>
+                        <h2 className="text-2xl font-display font-bold">Day {day.dayNumber} — {day.theme}</h2>
+                        {day.weatherNote && <p className="opacity-90 text-sm mt-1">{day.weatherNote}</p>}
+                      </div>
+                      <button 
+                        onClick={() => handleRegenerateDay(day.dayNumber, day.theme)}
+                        disabled={regeneratingDay === day.dayNumber}
+                        className="flex items-center gap-1.5 text-xs font-semibold bg-white/20 hover:bg-white/30 transition-colors px-3 py-1.5 rounded-full disabled:opacity-50"
+                        title="Generate a different plan for this day"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${regeneratingDay === day.dayNumber ? "animate-spin" : ""}`} />
+                        {regeneratingDay === day.dayNumber ? "Regenerating..." : "Regenerate Day"}
+                      </button>
+                    </div>
+
+                    {/* Meal Plan for the Day */}
+                    {day.meals && (
+                      <div className="px-6 pt-6 grid grid-cols-3 gap-3">
+                        {[
+                          { label: "Breakfast", key: "breakfast", icon: <Coffee className="w-4 h-4" /> },
+                          { label: "Lunch", key: "lunch", icon: <UtensilsCrossed className="w-4 h-4" /> },
+                          { label: "Dinner", key: "dinner", icon: <Moon className="w-4 h-4" /> },
+                        ].map(meal => (
+                          <div key={meal.key} className="bg-ivory/50 dark:bg-midnight/30 p-3 rounded-xl border border-ivory/30 text-xs">
+                            <div className="flex items-center gap-1.5 text-amber font-semibold mb-1">
+                              {meal.icon} {meal.label}
+                            </div>
+                            <p className="text-midnight/80 dark:text-ivory/80 font-medium leading-snug">{day.meals[meal.key]?.suggestion}</p>
+                            <p className="text-midnight/40 dark:text-ivory/40 mt-1">{day.meals[meal.key]?.estimatedCost}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="p-6 lg:p-8 flex flex-col gap-8">
+                      {day.activities?.map((act: any, index: number) => (
+                        <motion.div
+                          key={act.id || index}
+                          className="relative pl-8"
+                          onHoverStart={() => setActiveId(act.id)}
+                          onHoverEnd={() => setActiveId(undefined)}
+                        >
+                          {index !== day.activities.length - 1 && (
+                            <div className="absolute left-[11px] top-8 bottom-[-32px] w-[2px] bg-amber/20" />
+                          )}
+                          <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full border-4 border-white dark:border-[#0A0F1C] bg-amber shadow-sm z-10" />
+
+                          <div className={`p-5 rounded-2xl border transition-all ${activeId === act.id ? 'border-amber shadow-md bg-amber/5' : 'border-ivory/20 bg-ivory/10 hover:border-amber/50'}`}>
+                            <div className="flex justify-between items-start mb-2">
+                              <h3 className="font-semibold text-lg font-display">{act.name}</h3>
+                              <span className="text-amber font-bold text-sm bg-amber/10 px-2 py-1 rounded-md shrink-0 ml-2">{act.time}</span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-4 text-xs text-midnight/60 dark:text-ivory/60 mb-4">
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3"/> {act.location}</span>
+                              <span className="flex items-center gap-1 uppercase tracking-widest">{act.category}</span>
+                              <span className="flex items-center gap-1 font-semibold text-green-500">
+                                {typeof act.estimatedCost === 'object' 
+                                  ? `${act.estimatedCost.currency || ""} ${act.estimatedCost.amount}` 
+                                  : (act.estimatedCost || "Free")}
+                              </span>
+                            </div>
+                            <p className="text-sm leading-relaxed text-midnight/80 dark:text-ivory/80">{act.description}</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* ── RESTAURANTS TAB ── */}
+            {activeTab === "restaurants" && (
+              <div className="flex flex-col gap-6">
+                <div className="bg-white dark:bg-midnight/50 rounded-3xl border border-ivory/20 shadow-sm overflow-hidden">
+                  <div className="bg-gradient-to-r from-amber/20 to-coral/10 p-5 flex items-center gap-3 border-b border-ivory/20">
+                    <div className="text-amber"><UtensilsCrossed className="w-5 h-5" /></div>
+                    <h3 className="text-xl font-display font-bold">Recommended Spots</h3>
+                  </div>
+                  <div className="p-6 flex flex-col gap-4">
+                    {restaurants.length > 0 ? (
+                      restaurants.map((r: any, i: number) => (
+                        <div key={i} className="flex items-start justify-between gap-4 p-4 bg-ivory/40 dark:bg-midnight/30 rounded-xl border border-ivory/20 hover:border-amber/30 transition-colors">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1 flex-wrap">
+                              <h4 className="font-semibold font-display">{r.name}</h4>
+                              <span className={`text-sm font-bold ${getPriceColor(r.priceRange)}`}>{r.priceRange}</span>
+                              <Badge>{r.cuisine}</Badge>
+                            </div>
+                            <p className="text-xs text-midnight/40 dark:text-ivory/40 flex items-center gap-1"><MapPin className="w-3 h-3"/> {r.location}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-midnight/40 dark:text-ivory/40 py-4 text-center">No recommendations available.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── BUDGET TAB ── */}
+            {activeTab === "budget" && cost && (
+              <div className="flex flex-col gap-6">
+                {/* Total Cost Card */}
+                <div className="bg-gradient-to-br from-amber to-coral p-8 rounded-3xl text-white shadow-xl">
+                  <p className="text-sm font-semibold uppercase tracking-wider opacity-80 mb-2">Total Estimated Trip Cost</p>
+                  <p className="text-5xl font-display font-bold mb-1">{sym}{cost.min.toLocaleString()} – {sym}{cost.max.toLocaleString()}</p>
+                  <p className="opacity-80 text-sm">{currCode} · ~{sym}{cost.perDayMin?.toLocaleString()}–{sym}{cost.perDayMax?.toLocaleString()} per day</p>
+                </div>
+
+                {/* Breakdown */}
+                <div className="bg-white dark:bg-midnight/50 rounded-3xl border border-ivory/20 p-8 shadow-sm">
+                  <h3 className="font-display font-bold text-xl mb-6">Cost Breakdown</h3>
+                  <div className="space-y-5">
+                    {cost.breakdown && Object.entries(cost.breakdown).map(([key, val]: [string, any]) => {
+                      const total = cost.max;
+                      const pct = Math.round((val / total) * 100);
+                      return (
+                        <div key={key}>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="capitalize font-medium">{key}</span>
+                            <span className="font-bold text-amber">{sym}{typeof val === 'number' ? val.toLocaleString() : val} <span className="text-midnight/40 dark:text-ivory/40 font-normal">({pct}%)</span></span>
+                          </div>
+                          <div className="h-2 bg-amber/10 rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full bg-gradient-to-r from-amber to-coral rounded-full"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${pct}%` }}
+                              transition={{ duration: 0.8, delay: 0.1 }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Budget Tips */}
+                {cost.budgetTips?.length > 0 && (
+                  <div className="bg-white dark:bg-midnight/50 rounded-3xl border border-ivory/20 p-8 shadow-sm">
+                    <h3 className="font-display font-bold text-xl mb-4">Money-Saving Tips</h3>
+                    <ul className="space-y-3">
+                      {cost.budgetTips.map((tip: string, i: number) => (
+                        <li key={i} className="flex gap-3 text-sm text-midnight/80 dark:text-ivory/80">
+                          <span className="text-amber shrink-0">💡</span>
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        </div>
+
+        {/* Full Width Map — always centered on the actual destination */}
+        <div className="mt-16 h-[500px] w-full rounded-3xl overflow-hidden shadow-2xl border border-ivory/20 relative">
+          <div className="absolute top-4 left-4 z-10 bg-white/90 dark:bg-midnight/90 backdrop-blur-md px-4 py-2 rounded-lg shadow-lg font-semibold border border-ivory/20 text-sm">
+            📍 {currentItinerary.user_destination} Route Map
+          </div>
+            {mapMarkers.length > 0 && (
+              <ItineraryMap
+                activities={mapMarkers}
+                activeActivityId={activeId}
+                onActivityClick={setActiveId}
+              />
+            )}
+        </div>
+
+      </div>
+
+      <button className="fixed bottom-8 right-8 w-14 h-14 bg-midnight dark:bg-white text-white dark:text-midnight rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.3)] hover:scale-105 transition-transform z-50">
+        <MessageSquare className="w-6 h-6" />
+      </button>
+
+    </div>
+  );
+}
