@@ -110,6 +110,35 @@ function ParticleCanvas() {
 
 /* ─── Animated Stat ──────────────────────────────── */
 function StatCard({ value, label, icon: Icon, delay }: { value: string; label: string; icon: ElementType; delay: number }) {
+  const [displayValue, setDisplayValue] = useState("0");
+  
+  useEffect(() => {
+    if (value.includes("+") || value.includes("★") || value.includes("<")) {
+      const num = parseInt(value.replace(/[^0-9]/g, ""));
+      if (isNaN(num)) {
+        setDisplayValue(value);
+        return;
+      }
+      
+      let start = 0;
+      const duration = 2000;
+      const increment = num / (duration / 16);
+      
+      const timer = setInterval(() => {
+        start += increment;
+        if (start >= num) {
+          setDisplayValue(value);
+          clearInterval(timer);
+        } else {
+          setDisplayValue(Math.floor(start).toLocaleString() + (value.includes("+") ? "+" : ""));
+        }
+      }, 16);
+      return () => clearInterval(timer);
+    } else {
+      setDisplayValue(value);
+    }
+  }, [value]);
+
   return (
     <motion.div
       variants={fadeUp}
@@ -118,7 +147,7 @@ function StatCard({ value, label, icon: Icon, delay }: { value: string; label: s
       whileHover={{ scale: 1.05, y: -4 }}
     >
       <Icon className="w-5 h-5 text-cyan-400 mx-auto mb-1" style={{ color: "#00F5FF" }} />
-      <div className="stat-number">{value}</div>
+      <div className="stat-number">{displayValue}</div>
       <p className="text-xs text-ivory/50 uppercase tracking-widest">{label}</p>
     </motion.div>
   );
