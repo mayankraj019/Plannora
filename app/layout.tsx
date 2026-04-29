@@ -27,6 +27,9 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased dark">
       <head>
         <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Plannora" />
       </head>
       <body className="antialiased min-h-screen selection:bg-amber/30 selection:text-amber">
         <AuthProvider>
