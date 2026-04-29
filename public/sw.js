@@ -1,10 +1,11 @@
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open('plannora-v1').then((cache) => {
+    caches.open('plannora-v2').then((cache) => {
       return cache.addAll([
         '/',
         '/manifest.json',
-        '/icon.png'
+        '/plannora-app-icon-v2.png',
+        '/plannora-logo.png'
       ]);
     })
   );

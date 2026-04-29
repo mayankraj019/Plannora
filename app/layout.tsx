@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   description: "Plan your perfect trip in seconds with AI.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon.png",
-    apple: "/icon.png",
+    icon: "/plannora-app-icon-v2.png",
+    apple: "/plannora-app-icon-v2.png",
   },
 };
 

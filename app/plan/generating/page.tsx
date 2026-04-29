@@ -129,7 +129,7 @@ export default function GeneratingPage() {
           className="mb-8 text-amber relative"
         >
           <div className="w-24 h-24 rounded-3xl overflow-hidden bg-white/5 border border-amber/20 p-2 shadow-2xl">
-            <img src="/logo.png" alt="Plannora Logo" className="w-full h-full object-contain" />
+            <img src="/plannora-logo.png" alt="Plannora Logo" className="w-full h-full object-contain" />
           </div>
           <motion.div
             animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
