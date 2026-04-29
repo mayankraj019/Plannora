@@ -124,12 +124,12 @@ export default function PlanWizard() {
             {step === 3 && (
               <div className="flex flex-col gap-6">
                 <h2 className="text-4xl font-display font-bold">When is your trip?</h2>
-                <div className="mt-4 border-2 border-amber/20 rounded-xl bg-ivory/30 dark:bg-midnight/50 flex flex-col items-center justify-center overflow-x-auto w-full max-w-full">
+                <div className="mt-4 border-2 border-amber/20 rounded-xl bg-ivory/30 dark:bg-midnight/50 overflow-x-auto w-full max-w-full flex justify-start sm:justify-center p-2">
                   <DayPicker
                     mode="range"
                     selected={{ from: dates.from || undefined, to: dates.to || undefined }}
                     onSelect={(range) => setDates({ from: range?.from || null, to: range?.to || null })}
-                    className="p-2 sm:p-4 custom-calendar"
+                    className="custom-calendar mx-auto sm:mx-0"
                   />
                 </div>
               </div>
