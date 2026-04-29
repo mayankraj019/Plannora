@@ -12,7 +12,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", size = "md", ...props }, ref) => {
+  ({ className, variant = "primary", size = "md", children, ...props }, ref) => {
     const base =
       "relative inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber disabled:opacity-50 disabled:pointer-events-none ring-offset-background overflow-hidden";
 
@@ -41,7 +41,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         transition={{ type: "spring", stiffness: 400, damping: 20 }}
         className={cn(base, variants[variant], sizes[size], className)}
         {...(props as HTMLMotionProps<"button">)}
-      />
+      >
+        {children}
+      </motion.button>
     );
   }
 );

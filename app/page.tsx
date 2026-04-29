@@ -2,12 +2,22 @@
 
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, type Variants } from "framer-motion";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useState, useEffect, useRef, useCallback, type ElementType } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { ArrowRight, MapPin, Globe, Sparkles, Loader2, Zap, Map, Clock, Users, Star, Navigation } from "lucide-react";
-import ItineraryMap from "@/components/map/ItineraryMap";
 import { Button } from "@/components/ui/Button";
+
+// Dynamically import the map so MapTiler SDK never runs during SSR
+const ItineraryMap = dynamic(() => import("@/components/map/ItineraryMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full rounded-xl bg-[#050A18] flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+    </div>
+  ),
+});
 
 /* ─── Data ─────────────────────────────────────── */
 const DEMO_LOCATIONS = [
@@ -143,7 +153,7 @@ function StatCard({ value, label, icon: Icon, delay }: { value: string; label: s
     <motion.div
       variants={fadeUp}
       transition={{ delay }}
-      className="holo-card p-5 flex flex-col gap-2 text-center group cursor-default"
+      className="holo-card p-3 md:p-5 flex flex-col gap-1 md:gap-2 text-center group cursor-default"
       whileHover={{ scale: 1.05, y: -4 }}
     >
       <Icon className="w-5 h-5 text-cyan-400 mx-auto mb-1" style={{ color: "#00F5FF" }} />
@@ -158,6 +168,15 @@ export default function LandingPage() {
   const { user } = useAuthStore();
   const [userLocation, setUserLocation] = useState<UserLocation>({ city: "Your Location", country: "", loading: true });
   const [glitch, setGlitch] = useState(false);
+  const [timeStr, setTimeStr] = useState("");
+
+  useEffect(() => {
+    setTimeStr(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+    const timer = setInterval(() => {
+      setTimeStr(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+    }, 1000 * 60);
+    return () => clearInterval(timer);
+  }, []);
 
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -217,7 +236,6 @@ export default function LandingPage() {
   }, []);
 
   const handleSignOut = async () => { await supabase.auth.signOut(); };
-  const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="relative min-h-screen bg-[#050A18] text-ivory overflow-hidden font-body" onMouseMove={handleMouseMove}>
@@ -249,7 +267,7 @@ export default function LandingPage() {
         initial={{ opacity: 0, y: -24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: "easeOut" }}
-        className="absolute top-0 left-0 right-0 z-50 px-8 py-5 flex justify-between items-center plannora-glass border-b border-cyan-500/10"
+        className="absolute top-0 left-0 right-0 z-50 px-4 md:px-8 py-4 md:py-5 flex justify-between items-center plannora-glass border-b border-cyan-500/10"
       >
         {/* Logo */}
         <Link href="/">
@@ -260,21 +278,23 @@ export default function LandingPage() {
               </div>
               <div className="absolute inset-0 rounded-xl" style={{ boxShadow: "0 0 12px rgba(0,245,255,0.3)", animation: "pulseRing 2s ease-out infinite" }} />
             </div>
-            <span className="font-display font-bold text-xl tracking-tight text-white">
+            <span className="font-display font-bold text-lg md:text-xl tracking-tight text-white">
               Plan<span style={{ color: "#00F5FF" }} className="neon-text">nora</span>
             </span>
           </motion.div>
         </Link>
 
         {/* Nav links */}
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-2 md:gap-4 items-center">
           {user ? (
             <>
               <span className="text-ivory/40 text-sm hidden md:inline font-mono">{user.email}</span>
               <Button variant="ghost" className="text-ivory/70 hover:text-white" onClick={handleSignOut}>Sign Out</Button>
               <Link href="/plan">
                 <Button variant="primary" className="relative overflow-hidden">
-                  Plan a Trip <Navigation className="w-4 h-4 ml-1" />
+                  <span className="hidden sm:inline">Plan a Trip</span>
+                  <span className="sm:hidden">Plan</span>
+                  <Navigation className="w-3 h-3 md:w-4 md:h-4 ml-1" />
                 </Button>
               </Link>
             </>
@@ -287,10 +307,12 @@ export default function LandingPage() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.97 }}
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-[#050A18] relative overflow-hidden"
+                  className="px-3 md:px-5 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold text-[#050A18] relative overflow-hidden"
                   style={{ background: "linear-gradient(135deg, #00F5D4, #00F5FF)" }}
                 >
-                  Get Started <ArrowRight className="inline w-4 h-4 ml-1" />
+                  <span className="hidden sm:inline">Get Started</span>
+                  <span className="sm:hidden">Start</span>
+                  <ArrowRight className="inline w-3 h-3 md:w-4 md:h-4 ml-1" />
                 </motion.button>
               </Link>
             </>
@@ -299,7 +321,7 @@ export default function LandingPage() {
       </motion.nav>
 
       {/* ══════════ HERO: text left, map right ══════════ */}
-      <main className="relative z-10 pt-36 pb-12 px-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
+      <main className="relative z-10 pt-28 md:pt-36 pb-12 px-4 md:px-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-14 items-center">
 
         {/* ── Left: Text content ── */}
         <motion.div variants={stagger} initial="hidden" animate="show" className="flex flex-col gap-7">
@@ -321,7 +343,7 @@ export default function LandingPage() {
           {/* Headline */}
           <motion.div variants={fadeUp}>
             <h1
-              className="text-5xl lg:text-[4.5rem] font-display font-bold leading-[1.05] tracking-tight"
+              className="text-4xl sm:text-5xl lg:text-[4.5rem] font-display font-bold leading-[1.1] md:leading-[1.05] tracking-tight"
               style={{ animation: glitch ? "glitch 0.6s steps(1) 1" : "none" }}
             >
               <span className="text-white">Plan your</span>
@@ -377,7 +399,7 @@ export default function LandingPage() {
           </motion.div>
 
           {/* Stats row */}
-          <motion.div variants={fadeUp} className="grid grid-cols-4 gap-3 mt-2">
+          <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mt-2">
             {STATS.map(({ value, label, icon }, i) => (
               <StatCard key={label} value={value} label={label} icon={icon} delay={i * 0.08} />
             ))}

@@ -2,8 +2,17 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Calendar, Users, Wallet, Share, Download, Trash2, Edit2, MessageSquare, Clock, Coffee, UtensilsCrossed, Moon, TrendingUp, RefreshCw, BedDouble, ExternalLink, Plane, TrainFront, Bus } from "lucide-react";
-import ItineraryMap from "@/components/map/ItineraryMap";
+import dynamic from "next/dynamic";
+import { MapPin, Calendar, Users, Wallet, Share, Download, Trash2, Edit2, MessageSquare, Clock, Coffee, UtensilsCrossed, Moon, TrendingUp, RefreshCw, BedDouble, ExternalLink, Plane, TrainFront, Bus, Loader2 } from "lucide-react";
+
+const ItineraryMap = dynamic(() => import("@/components/map/ItineraryMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-[#0A0F1C]">
+      <Loader2 className="w-6 h-6 text-amber animate-spin" />
+    </div>
+  ),
+});
 import DestinationGallery from "@/components/ui/DestinationGallery";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
