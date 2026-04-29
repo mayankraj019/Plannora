@@ -1,0 +1,17 @@
+{
+  "name": "Plannora Travel Planner",
+  "short_name": "Plannora",
+  "description": "Premium AI-powered travel planning for your next adventure.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0F1C",
+  "theme_color": "#FF7F50",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

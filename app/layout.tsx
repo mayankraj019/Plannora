@@ -7,10 +7,15 @@ import NexoraChat from "@/components/ui/NexoraChat";
 export const metadata: Metadata = {
   title: "Plannora - AI Travel Planner",
   description: "Plan your perfect trip in seconds with AI.",
+  manifest: "/manifest.json",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/icon.png",
+    apple: "/icon.png",
   },
+};
+
+export const viewport = {
+  themeColor: "#FF7F50",
 };
 
 export default function RootLayout({
@@ -29,6 +34,17 @@ export default function RootLayout({
           <NexoraChat />
           {children}
         </AuthProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js');
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
