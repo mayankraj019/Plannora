@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 
 interface PlannerState {
   step: number;
-  destination: any;
+  destination: any  ;
   dates: { from: Date | null; to: Date | null };
   companions: string;
   tripTypes: string[];
@@ -18,15 +18,15 @@ interface PlannerState {
   language: string;
   setLanguage: (lang: string) => void;
   setStep: (step: number) => void;
-  setDestination: (dest: any) => void;
-  setDates: (dates: any) => void;
+  setDestination: (dest: any  ) => void;
+  setDates: (dates: any  ) => void;
   setCompanions: (comp: string) => void;
   toggleTripType: (type: string) => void;
   setBudgetTier: (tier: string) => void;
-  setPreferences: (prefs: any) => void;
-  currentItinerary: any;
-  setCurrentItinerary: (itinerary: any) => void;
-  updateDay: (dayNumber: number, newDayData: any) => void;
+  setPreferences: (prefs: any  ) => void;
+  currentItinerary: any  ;
+  setCurrentItinerary: (itinerary: any  ) => void;
+  updateDay: (dayNumber: number, newDayData: any  ) => void;
   resetTrip: () => void;
 }
 
@@ -78,7 +78,7 @@ export const usePlannerStore = create<PlannerState>()(
       updateDay: (dayNumber, newDayData) => 
         set((state) => {
           if (!state.currentItinerary || !state.currentItinerary.days) return state;
-          const updatedDays = state.currentItinerary.days.map((day: any) => 
+          const updatedDays = state.currentItinerary.days.map((day: any  ) => 
             day.dayNumber === dayNumber ? { ...day, ...newDayData, dayNumber } : day
           );
           return { currentItinerary: { ...state.currentItinerary, days: updatedDays } };

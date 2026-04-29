@@ -280,7 +280,8 @@ export default function LandingPage() {
           <motion.div className="flex items-center gap-3" whileHover={{ scale: 1.04 }} transition={{ type: "spring", stiffness: 400 }}>
             <div className="relative">
               <div className="w-10 h-10 rounded-xl overflow-hidden bg-white/5 border border-cyan-500/20 p-1">
-                <img src="/plannora-logo.png" alt="Plannora Logo" className="w-full h-full object-contain" />
+                 { }
+<img src="/plannora-logo.png" alt="Plannora Logo" className="w-full h-full object-contain" />
               </div>
               <div className="absolute inset-0 rounded-xl" style={{ boxShadow: "0 0 12px rgba(0,245,255,0.3)", animation: "pulseRing 2s ease-out infinite" }} />
             </div>
@@ -522,7 +523,8 @@ export default function LandingPage() {
               whileHover={{ scale: 1.04, y: -6, zIndex: 10 }}
               style={{ border: "1px solid rgba(0,245,255,0.1)", position: "relative" }}
             >
-              <img
+               { }
+<img
                 src={city.img}
                 alt={city.name}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"

@@ -60,14 +60,14 @@ export default function DestinationsPage() {
         
         const tags = ["Beach", "City", "Culture", "History", "Luxury", "Nature"];
         
-        const formatted = data.map((c: any, i: number) => ({
+        const formatted = data.map((c: any  , i: number) => ({
           name: c.name.common,
           country: c.name.official || c.name.common,
           continent: c.region === "Americas" ? "Americas" : c.region === "Asia" ? "Asia" : c.region === "Europe" ? "Europe" : c.region === "Africa" ? "Africa" : c.region === "Oceania" ? "Oceania" : "Other",
           tag: tags[i % tags.length],
           img: IMAGE_POOL[i % IMAGE_POOL.length],
           flag: c.flags.svg
-        })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+        })).sort((a: any  , b: any  ) => a.name.localeCompare(b.name));
         
         setCountries(formatted);
       } catch (e) {
@@ -114,7 +114,8 @@ export default function DestinationsPage() {
         </Link>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/5 border border-cyan-500/20 p-0.5">
-            <img src="/logo.png" alt="Plannora Logo" className="w-full h-full object-contain" />
+             { }
+<img src="/logo.png" alt="Plannora Logo" className="w-full h-full object-contain" />
           </div>
           <span className="font-display font-bold text-lg">Destinations</span>
         </div>
@@ -222,7 +223,8 @@ export default function DestinationsPage() {
                   style={{ border: "1px solid rgba(0,245,255,0.1)", position: "relative" }}
                   onClick={() => window.open(`https://www.google.com/travel/search?q=${encodeURIComponent(city.name)}`, "_blank")}
                 >
-                  <img
+                   { }
+<img
                     src={city.img}
                     alt={city.name}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"

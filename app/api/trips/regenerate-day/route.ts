@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -17,6 +17,70 @@ export async function POST(req: NextRequest) {
         model: "gemini-2.5-flash",
         generationConfig: {
           responseMimeType: "application/json",
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              dayNumber: { type: SchemaType.NUMBER },
+              theme: { type: SchemaType.STRING },
+              weatherNote: { type: SchemaType.STRING },
+              meals: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  breakfast: {
+                    type: SchemaType.OBJECT,
+                    properties: { suggestion: { type: SchemaType.STRING }, estimatedCost: { type: SchemaType.STRING } },
+                    required: ["suggestion", "estimatedCost"]
+                  },
+                  lunch: {
+                    type: SchemaType.OBJECT,
+                    properties: { suggestion: { type: SchemaType.STRING }, estimatedCost: { type: SchemaType.STRING } },
+                    required: ["suggestion", "estimatedCost"]
+                  },
+                  dinner: {
+                    type: SchemaType.OBJECT,
+                    properties: { suggestion: { type: SchemaType.STRING }, estimatedCost: { type: SchemaType.STRING } },
+                    required: ["suggestion", "estimatedCost"]
+                  }
+                },
+                required: ["breakfast", "lunch", "dinner"]
+              },
+              activities: {
+                type: SchemaType.ARRAY,
+                items: {
+                  type: SchemaType.OBJECT,
+                  properties: {
+                    id: { type: SchemaType.STRING },
+                    time: { type: SchemaType.STRING },
+                    period: { type: SchemaType.STRING },
+                    name: { type: SchemaType.STRING },
+                    location: { type: SchemaType.STRING },
+                    coordinates: {
+                      type: SchemaType.OBJECT,
+                      properties: { lat: { type: SchemaType.NUMBER }, lng: { type: SchemaType.NUMBER } },
+                      required: ["lat", "lng"]
+                    },
+                    duration: { type: SchemaType.STRING },
+                    description: { type: SchemaType.STRING },
+                    estimatedCost: {
+                      type: SchemaType.OBJECT,
+                      properties: { amount: { type: SchemaType.NUMBER }, currency: { type: SchemaType.STRING }, note: { type: SchemaType.STRING } },
+                      required: ["amount", "currency", "note"]
+                    },
+                    category: { type: SchemaType.STRING },
+                    tips: { type: SchemaType.STRING },
+                    bookingRequired: { type: SchemaType.BOOLEAN },
+                    transportToNext: {
+                      type: SchemaType.OBJECT,
+                      properties: { mode: { type: SchemaType.STRING }, duration: { type: SchemaType.STRING }, cost: { type: SchemaType.STRING }, instructions: { type: SchemaType.STRING } },
+                      required: ["mode", "duration", "cost", "instructions"]
+                    }
+                  },
+                  required: ["id", "time", "period", "name", "location", "coordinates", "duration", "description", "estimatedCost", "category", "tips", "bookingRequired", "transportToNext"]
+                }
+              }
+            },
+            required: ["dayNumber", "theme", "weatherNote", "meals", "activities"]
+          },
           temperature: 0.9, // higher temp for more variety
           topP: 0.9,
           maxOutputTokens: 2048,
@@ -89,7 +153,7 @@ Return ONLY a valid JSON object with this exact structure (a single day object):
 `;
 
     const result = await geminiModel.generateContent(prompt);
-    let text = result.response.text();
+    const text = result.response.text();
     
     // Robust JSON extraction
     const jsonStart = text.indexOf("{");
@@ -101,7 +165,7 @@ Return ONLY a valid JSON object with this exact structure (a single day object):
 
     const newDay = JSON.parse(cleanJson);
     return NextResponse.json({ success: true, day: newDay });
-  } catch (error: any) {
+  } catch (error: any  ) {
     console.error("Gemini regenerate day error:", error);
 
     // Provide a rich demo fallback
@@ -113,7 +177,7 @@ Return ONLY a valid JSON object with this exact structure (a single day object):
   }
 }
 
-function buildDemoAlternativeDay(destination: string, dayNumber: number, geo: any, budget: string, currency: any) {
+function buildDemoAlternativeDay(destination: string, dayNumber: number, geo: any  , budget: string, currency: any  ) {
   const isLux = budget === "luxury";
   const sym = currency?.symbol || "$";
   return {

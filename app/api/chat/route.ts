@@ -39,7 +39,7 @@ Provide tailored advice based on this trip context if they ask about it.`;
     );
 
     // Filter out any messages that aren't user or model
-    const history = messages.map((m: any) => ({
+    const history = messages.map((m: any  ) => ({
       role: m.role === "user" ? "user" : "model",
       parts: m.parts || [{ text: m.text }],
     }));
@@ -68,7 +68,7 @@ Provide tailored advice based on this trip context if they ask about it.`;
       message: responseText,
     });
 
-  } catch (error: any) {
+  } catch (error: any  ) {
     console.error("Nexora chat error:", error);
     
     // Provide a friendly fallback if API fails

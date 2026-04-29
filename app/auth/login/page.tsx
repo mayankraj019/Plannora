@@ -31,7 +31,7 @@ export default function LoginPage() {
 
       // Successfully logged in
       router.push("/");
-    } catch (err: any) {
+    } catch (err: any  ) {
       console.error(err);
       setError(err.message || "Failed to log in.");
     } finally {
@@ -59,7 +59,8 @@ export default function LoginPage() {
         <div className="flex justify-center mb-8">
           <Link href="/">
             <div className="w-20 h-20 rounded-2xl bg-white/5 border border-amber/10 flex items-center justify-center shadow-xl overflow-hidden p-2">
-              <img src="/plannora-logo.png" alt="Plannora Logo" className="w-full h-full object-contain" />
+               { }
+<img src="/plannora-logo.png" alt="Plannora Logo" className="w-full h-full object-contain" />
             </div>
           </Link>
         </div>

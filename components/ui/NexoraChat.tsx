@@ -20,7 +20,7 @@ export default function NexoraChat() {
   const [isListening, setIsListening] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<any  >(null);
   const { currentItinerary, language } = usePlannerStore();
 
   // Auto-scroll to bottom
@@ -40,7 +40,7 @@ export default function NexoraChat() {
         recognitionRef.current.interimResults = true; // Show text as you speak
         recognitionRef.current.lang = navigator.language || "en-US";
 
-        recognitionRef.current.onresult = (event: any) => {
+        recognitionRef.current.onresult = (event: any  ) => {
           let finalTranscript = "";
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             if (event.results[i].isFinal) {
@@ -52,7 +52,7 @@ export default function NexoraChat() {
           }
         };
 
-        recognitionRef.current.onerror = (event: any) => {
+        recognitionRef.current.onerror = (event: any  ) => {
           console.error("Speech recognition error:", event.error);
           setIsListening(false);
           if (event.error === "not-allowed") {

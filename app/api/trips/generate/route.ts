@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
 // Dynamic currency fetch using RestCountries API
@@ -33,7 +33,7 @@ async function geocodeDestination(destination: string): Promise<{ lat: number; l
       const [lng, lat] = data.features[0].center;
       let countryCode;
       if (data.features[0].context) {
-        const countryFeature = data.features[0].context.find((c: any) => c.id.startsWith("country") || c.country_code);
+        const countryFeature = data.features[0].context.find((c: any  ) => c.id.startsWith("country") || c.country_code);
         if (countryFeature) countryCode = countryFeature.country_code || countryFeature.short_code;
       }
       return { lat, lng, name: data.features[0].place_name || destination, countryCode };
@@ -65,6 +65,108 @@ export async function POST(req: NextRequest) {
         model: "gemini-2.5-flash",
         generationConfig: {
           responseMimeType: "application/json",
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              tripTitle: { type: SchemaType.STRING },
+              summary: { type: SchemaType.STRING },
+              highlights: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+              destinationCoordinates: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  lat: { type: SchemaType.NUMBER },
+                  lng: { type: SchemaType.NUMBER }
+                },
+                required: ["lat", "lng"]
+              },
+              estimatedTotalCost: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  min: { type: SchemaType.NUMBER },
+                  max: { type: SchemaType.NUMBER },
+                  currency: { type: SchemaType.STRING },
+                  currencySymbol: { type: SchemaType.STRING },
+                  breakdown: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                      accommodation: { type: SchemaType.NUMBER },
+                      food: { type: SchemaType.NUMBER },
+                      activities: { type: SchemaType.NUMBER },
+                      transport: { type: SchemaType.NUMBER }
+                    },
+                    required: ["accommodation", "food", "activities", "transport"]
+                  }
+                },
+                required: ["min", "max", "currency", "currencySymbol", "breakdown"]
+              },
+              recommendedRestaurants: {
+                type: SchemaType.ARRAY,
+                items: {
+                  type: SchemaType.OBJECT,
+                  properties: {
+                    name: { type: SchemaType.STRING },
+                    cuisine: { type: SchemaType.STRING },
+                    priceRange: { type: SchemaType.STRING },
+                    location: { type: SchemaType.STRING },
+                    coordinates: {
+                      type: SchemaType.OBJECT,
+                      properties: {
+                        lat: { type: SchemaType.NUMBER },
+                        lng: { type: SchemaType.NUMBER }
+                      },
+                      required: ["lat", "lng"]
+                    }
+                  },
+                  required: ["name", "cuisine", "priceRange", "location", "coordinates"]
+                }
+              },
+              bestTimeToVisit: { type: SchemaType.STRING },
+              packingEssentials: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+              days: {
+                type: SchemaType.ARRAY,
+                items: {
+                  type: SchemaType.OBJECT,
+                  properties: {
+                    dayNumber: { type: SchemaType.NUMBER },
+                    theme: { type: SchemaType.STRING },
+                    activities: {
+                      type: SchemaType.ARRAY,
+                      items: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                          time: { type: SchemaType.STRING },
+                          name: { type: SchemaType.STRING },
+                          location: { type: SchemaType.STRING },
+                          coordinates: {
+                            type: SchemaType.OBJECT,
+                            properties: {
+                              lat: { type: SchemaType.NUMBER },
+                              lng: { type: SchemaType.NUMBER }
+                            },
+                            required: ["lat", "lng"]
+                          },
+                          description: { type: SchemaType.STRING },
+                          estimatedCost: { type: SchemaType.STRING },
+                          category: { type: SchemaType.STRING },
+                          transportToNext: {
+                            type: SchemaType.OBJECT,
+                            properties: {
+                              mode: { type: SchemaType.STRING },
+                              duration: { type: SchemaType.STRING }
+                            },
+                            required: ["mode", "duration"]
+                          }
+                        },
+                        required: ["time", "name", "location", "coordinates", "description", "estimatedCost", "category", "transportToNext"]
+                      }
+                    }
+                  },
+                  required: ["dayNumber", "theme", "activities"]
+                }
+              }
+            },
+            required: ["tripTitle", "summary", "highlights", "destinationCoordinates", "estimatedTotalCost", "recommendedRestaurants", "bestTimeToVisit", "packingEssentials", "days"]
+          },
           temperature: 0.7,
           topP: 0.8,
           maxOutputTokens: 8192,
@@ -192,14 +294,14 @@ Return ONLY a valid JSON object:
     }
     // Normalize restaurant priceRange: replace $ / $$ / $$$ with local currency symbol
     if (itinerary.recommendedRestaurants && currency.symbol !== "$") {
-      itinerary.recommendedRestaurants = itinerary.recommendedRestaurants.map((r: any) => ({
+      itinerary.recommendedRestaurants = itinerary.recommendedRestaurants.map((r: any  ) => ({
         ...r,
         priceRange: r.priceRange?.replace(/\$/g, currency.symbol)
       }));
     }
 
     return NextResponse.json({ success: true, itinerary });
-  } catch (error: any) {
+  } catch (error: any  ) {
     console.error("Gemini generation error:", error);
 
     // If quota exceeded or API unavailable, return a rich demo itinerary

@@ -136,10 +136,10 @@ export default function TripPage() {
   };
 
   // Extract all activities and restaurants for the map
-  const allActivities = currentItinerary.days?.flatMap((day: any) => day.activities) || [];
+  const allActivities = currentItinerary.days?.flatMap((day: any  ) => day.activities) || [];
   const mapMarkers = [
-    ...allActivities.map((a: any) => ({ ...a, type: 'activity' })),
-    ...(currentItinerary.recommendedRestaurants || currentItinerary.restaurantRecommendations || []).map((r: any, i: number) => ({
+    ...allActivities.map((a: any  ) => ({ ...a, type: 'activity' })),
+    ...(currentItinerary.recommendedRestaurants || currentItinerary.restaurantRecommendations || []).map((r: any  , i: number) => ({
       ...r,
       id: `rest_${i}`,
       category: 'food',
@@ -152,7 +152,7 @@ export default function TripPage() {
   const mapCenter = (
     currentItinerary.destinationCoordinates?.lat && currentItinerary.destinationCoordinates?.lng
       ? currentItinerary.destinationCoordinates
-      : allActivities.find((a: any) => a.coordinates?.lat)?.coordinates
+      : allActivities.find((a: any  ) => a.coordinates?.lat)?.coordinates
   ) || { lat: 48.8566, lng: 2.3522 }; // Paris as last-resort (neutral default)
 
   const cost = currentItinerary.estimatedTotalCost;
@@ -332,7 +332,7 @@ export default function TripPage() {
                 </div>
 
                 {/* Day-by-Day Timeline */}
-                {currentItinerary.days?.map((day: any) => (
+                {currentItinerary.days?.map((day: any  ) => (
                   <div key={day.dayNumber} className="bg-white dark:bg-midnight/50 rounded-3xl border border-amber/10 shadow-xl overflow-hidden">
                     <div className="bg-gradient-to-r from-amber to-coral p-6 text-white flex justify-between items-start">
                       <div>
@@ -370,7 +370,7 @@ export default function TripPage() {
                     )}
 
                     <div className="p-6 lg:p-8 flex flex-col gap-8">
-                      {day.activities?.map((act: any, index: number) => (
+                      {day.activities?.map((act: any  , index: number) => (
                         <motion.div
                           key={act.id || index}
                           className="relative pl-8"
@@ -416,7 +416,7 @@ export default function TripPage() {
                   </div>
                   <div className="p-6 flex flex-col gap-4">
                     {restaurants.length > 0 ? (
-                      restaurants.map((r: any, i: number) => (
+                      restaurants.map((r: any  , i: number) => (
                         <div key={i} className="flex items-start justify-between gap-4 p-4 bg-ivory/40 dark:bg-midnight/30 rounded-xl border border-ivory/20 hover:border-amber/30 transition-colors">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-1 flex-wrap">

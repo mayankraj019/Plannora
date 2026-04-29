@@ -106,7 +106,8 @@ export default function DestinationGallery({ destination }: { destination: strin
               className="relative max-w-5xl w-full max-h-full rounded-2xl overflow-hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <img
+               { }
+<img
                 src={selectedImage.urls.regular}
                 alt={selectedImage.alt_description}
                 className="w-full h-full object-contain"

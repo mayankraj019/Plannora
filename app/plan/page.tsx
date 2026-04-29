@@ -17,7 +17,7 @@ export default function PlanWizard() {
   // Clear previous trip data whenever the user opens the plan wizard
   useEffect(() => {
     resetTrip();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const languages = [

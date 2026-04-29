@@ -1,0 +1,140 @@
+﻿
+> plannora@0.1.0 lint
+> eslint
+
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\app\api\trips\regenerate-day\route.ts
+  180:83  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\app\auth\login\page.tsx
+    7:21  warning  'MapPin' is defined but never used                               @typescript-eslint/no-unused-vars
+   25:15  warning  'data' is assigned a value but never used                        @typescript-eslint/no-unused-vars
+  117:14  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\app\destinations\page.tsx
+   6:10  warning  'Globe' is defined but never used                                                                      @typescript-eslint/no-unused-vars
+  70:26  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\app\page.tsx
+  129:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\app\page.tsx:129:9
+  127 |       const num = parseInt(value.replace(/[^0-9]/g, ""));
+  128 |       if (isNaN(num)) {
+> 129 |         setDisplayValue(value);
+      |         ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  130 |         return;
+  131 |       }
+  132 |                                                                                                                    react-hooks/set-state-in-effect
+  174:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\app\page.tsx:174:5
+  172 |
+  173 |   useEffect(() => {
+> 174 |     setTimeStr(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  175 |     const timer = setInterval(() => {
+  176 |       setTimeStr(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+  177 |     }, 1000 * 60);  react-hooks/set-state-in-effect
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\app\plan\generating\page.tsx
+  50:48  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\app\plan\generating\page.tsx:50:48
+  48 |     const unsub = usePlannerStore.persist.onFinishHydration(() => setHydrated(true));
+  49 |     // If we're in a soft navigation the store is already hydrated
+> 50 |     if (usePlannerStore.persist.hasHydrated()) setHydrated(true);
+     |                                                ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  51 |     return () => unsub();
+  52 |   }, []);
+  53 |  react-hooks/set-state-in-effect
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\app\plan\page.tsx
+    7:33  warning  'Plane' is defined but never used                                @typescript-eslint/no-unused-vars
+    7:47  warning  'Calendar' is defined but never used                             @typescript-eslint/no-unused-vars
+  140:68  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  158:69  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  179:69  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\app\trips\[id]\page.tsx
+    6:60  warning  'Trash2' is defined but never used              @typescript-eslint/no-unused-vars
+    6:68  warning  'Edit2' is defined but never used               @typescript-eslint/no-unused-vars
+    6:90  warning  'Clock' is defined but never used               @typescript-eslint/no-unused-vars
+   45:11  warning  'step' is assigned a value but never used       @typescript-eslint/no-unused-vars
+   45:17  warning  'setStep' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  152:9   warning  'mapCenter' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  220:97  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  303:57  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  453:97  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\components\map\ItineraryMap.tsx
+   64:7   error    Error: Cannot access variable before it is declared
+
+`addMarkersAndRoutes` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\components\map\ItineraryMap.tsx:64:7
+  62 |
+  63 |     map.current.on("load", () => {
+> 64 |       addMarkersAndRoutes();
+     |       ^^^^^^^^^^^^^^^^^^^ `addMarkersAndRoutes` accessed before it is declared
+  65 |       // Auto-trigger geolocation if no activities are present or if explicitly requested
+  66 |       if (activities.length === 0 || traceLiveLocation) {
+  67 |         geolocate.trigger();
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\components\map\ItineraryMap.tsx:77:3
+   75 |   }, []);
+   76 |
+>  77 |   const addMarkersAndRoutes = () => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  78 |     if (!map.current) return;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  79 |
+      ΓÇª
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 188 |     }
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 189 |   };
+      | ^^^^^ `addMarkersAndRoutes` is declared here
+  190 |
+  191 |   useEffect(() => {
+  192 |     if (!map.current) return;  react-hooks/immutability
+   75:6   warning  React Hook useEffect has missing dependencies: 'activities', 'addMarkersAndRoutes', and 'traceLiveLocation'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+  109:40  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-explicit-any
+  113:35  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         @typescript-eslint/no-explicit-any
+  199:6   warning  React Hook useEffect has a missing dependency: 'addMarkersAndRoutes'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           react-hooks/exhaustive-deps
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\components\ui\DestinationGallery.tsx
+   4:10  warning  'ImageIcon' is defined but never used           @typescript-eslint/no-unused-vars
+  19:10  warning  'isLoading' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\components\ui\NexoraChat.tsx
+  36:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  36:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\lib\maptiler.ts
+  10:1  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+C:\Users\MAYANK RAJ\OneDrive\Desktop\Planora\prisma.config.ts
+  12:8  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 34 problems (17 errors, 17 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+

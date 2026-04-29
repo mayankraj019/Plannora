@@ -39,7 +39,7 @@ export default function SignupPage() {
       } else {
           setSuccess(true); // Needs email confirmation
       }
-    } catch (err: any) {
+    } catch (err: any  ) {
       console.error(err);
       setError(err.message || "Failed to sign up.");
     } finally {
