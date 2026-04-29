@@ -207,11 +207,17 @@ export default function LandingPage() {
       if (!cancelled) setUserLocation({ city, country, loading: false });
     };
     fetch("https://ipapi.co/json/")
-      .then(r => r.json())
-      .then(d => { if (d.city) setCity(d.city, d.country_name || ""); else throw new Error(); })
+      .then(r => {
+        if (!r.ok || !r.headers.get("content-type")?.includes("application/json")) throw new Error("ipapi failed");
+        return r.json();
+      })
+      .then(d => { if (d.city) setCity(d.city, d.country_name || ""); else throw new Error("No city"); })
       .catch(() =>
         fetch("https://api.bigdatacloud.net/data/ip-geolocation")
-          .then(r => r.json())
+          .then(r => {
+            if (!r.ok || !r.headers.get("content-type")?.includes("application/json")) throw new Error("bigdatacloud failed");
+            return r.json();
+          })
           .then(d => { const city = d.location?.city || ""; if (city) setCity(city, d.country?.name || ""); else setCity("Your Location", ""); })
           .catch(() => setCity("Your Location", ""))
       );
