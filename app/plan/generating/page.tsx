@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Globe, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { usePlannerStore } from "@/store/plannerStore";
 
 const LOADING_MESSAGES = [
@@ -18,7 +18,7 @@ const LOADING_MESSAGES = [
 
 async function geocodeDestination(query: string): Promise<{ lat: number; lng: number }> {
   const key = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
-  if (!key) return { lat: 48.8566, lng: 2.3522 }; // Paris as safe default
+  if (!key) return { lat: 48.8566, lng: 2.3522 };
   try {
     const res = await fetch(
       `https://api.maptiler.com/geocoding/${encodeURIComponent(query)}.json?key=${key}&limit=1`
@@ -37,10 +37,24 @@ async function geocodeDestination(query: string): Promise<{ lat: number; lng: nu
 export default function GeneratingPage() {
   const [messageIndex, setMessageIndex] = useState(0);
   const router = useRouter();
-  const { destination, dates, companions, tripTypes, budgetTier, preferences, language, setCurrentItinerary } = usePlannerStore();
+  const { destination, dates, companions, tripTypes, budgetTier, preferences, language, setCurrentItinerary } =
+    usePlannerStore();
   const hasCalledAPI = useRef(false);
+  // Guard: wait for Zustand to finish rehydrating from localStorage before reading state
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    // onFinishHydration fires when persist middleware is done loading from storage
+    const unsub = usePlannerStore.persist.onFinishHydration(() => setHydrated(true));
+    // If we're in a soft navigation the store is already hydrated
+    if (usePlannerStore.persist.hasHydrated()) setHydrated(true);
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    // Don't proceed until the store has been rehydrated — avoids using stale/null destination
+    if (!hydrated) return;
+
     const interval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
     }, 2500);
@@ -49,7 +63,6 @@ export default function GeneratingPage() {
       if (hasCalledAPI.current) return;
       hasCalledAPI.current = true;
 
-      // Determine final destination string
       const destName = destination?.name?.trim() || "";
       if (!destName) {
         alert("Please enter a destination first.");
@@ -57,12 +70,13 @@ export default function GeneratingPage() {
         return;
       }
 
-      // Geocode destination CLIENT-SIDE — guaranteed real coordinates
+      // Geocode destination CLIENT-SIDE — guaranteed real coordinates for the actual location
       const geoCoords = await geocodeDestination(destName);
 
-      const days = dates.from && dates.to
-        ? Math.max(1, Math.ceil((dates.to.getTime() - dates.from.getTime()) / (1000 * 60 * 60 * 24)))
-        : 3;
+      const days =
+        dates.from && dates.to
+          ? Math.max(1, Math.ceil((dates.to.getTime() - dates.from.getTime()) / (1000 * 60 * 60 * 24)))
+          : 3;
 
       try {
         const response = await fetch("/api/trips/generate", {
@@ -85,12 +99,13 @@ export default function GeneratingPage() {
         if (data.success && data.itinerary) {
           const finalItinerary = {
             ...data.itinerary,
-            // Always use client-geocoded coordinates so map is never wrong
+            // Always use client-geocoded coordinates so the map is never wrong
             destinationCoordinates: geoCoords,
             user_destination: destName,
-            user_dates: dates.from && dates.to
-              ? `${dates.from.toLocaleDateString()} - ${dates.to.toLocaleDateString()}`
-              : "Upcoming",
+            user_dates:
+              dates.from && dates.to
+                ? `${dates.from.toLocaleDateString()} - ${dates.to.toLocaleDateString()}`
+                : "Upcoming",
             user_duration: days,
             user_companions: companions,
             user_budget: budgetTier,
@@ -112,7 +127,8 @@ export default function GeneratingPage() {
     generateTrip();
 
     return () => clearInterval(interval);
-  }, [router, destination, dates, companions, tripTypes, budgetTier, preferences, language, setCurrentItinerary]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
 
   return (
     <div className="min-h-screen bg-midnight text-ivory flex flex-col items-center justify-center font-body relative overflow-hidden">

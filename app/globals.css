@@ -162,6 +162,21 @@
     animation: ticker 20s linear infinite;
     width: max-content;
   }
+
+  /* ── Calendar Mobile Fix ── */
+  .custom-calendar {
+    --rdp-cell-size: 40px;
+    margin: 0;
+  }
+  @media (max-width: 480px) {
+    .custom-calendar {
+      --rdp-cell-size: 32px !important;
+      font-size: 0.875rem;
+    }
+    .custom-calendar .rdp-caption {
+      padding: 0 0.5rem;
+    }
+  }
 }
 
 /* ════════════════ KEYFRAMES ════════════════ */

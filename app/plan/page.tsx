@@ -6,12 +6,19 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ArrowRight, ArrowLeft, Plane, Users, Calendar, MapPin, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 
 export default function PlanWizard() {
-  const { step, setStep, destination, setDestination, dates, setDates, companions, setCompanions, tripTypes, toggleTripType, budgetTier, setBudgetTier, language, setLanguage } = usePlannerStore();
+  const { step, setStep, destination, setDestination, dates, setDates, companions, setCompanions, tripTypes, toggleTripType, budgetTier, setBudgetTier, language, setLanguage, resetTrip } = usePlannerStore();
   const router = useRouter();
+
+  // Clear previous trip data whenever the user opens the plan wizard
+  useEffect(() => {
+    resetTrip();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const languages = [
     { name: "English", native: "English" },
@@ -117,12 +124,12 @@ export default function PlanWizard() {
             {step === 3 && (
               <div className="flex flex-col gap-6">
                 <h2 className="text-4xl font-display font-bold">When is your trip?</h2>
-                <div className="mt-4 border-2 border-amber/20 rounded-xl bg-ivory/30 dark:bg-midnight/50 flex flex-col items-center justify-center overflow-hidden">
+                <div className="mt-4 border-2 border-amber/20 rounded-xl bg-ivory/30 dark:bg-midnight/50 flex flex-col items-center justify-center overflow-x-auto w-full max-w-full">
                   <DayPicker
                     mode="range"
                     selected={{ from: dates.from || undefined, to: dates.to || undefined }}
                     onSelect={(range) => setDates({ from: range?.from || null, to: range?.to || null })}
-                    className="p-4"
+                    className="p-2 sm:p-4 custom-calendar"
                   />
                 </div>
               </div>

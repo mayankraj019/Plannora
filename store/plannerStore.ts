@@ -27,6 +27,7 @@ interface PlannerState {
   currentItinerary: any;
   setCurrentItinerary: (itinerary: any) => void;
   updateDay: (dayNumber: number, newDayData: any) => void;
+  resetTrip: () => void;
 }
 
 export const usePlannerStore = create<PlannerState>()(
@@ -64,6 +65,16 @@ export const usePlannerStore = create<PlannerState>()(
       setPreferences: (prefs) =>
         set((state) => ({ preferences: { ...state.preferences, ...prefs } })),
       setCurrentItinerary: (itinerary) => set({ currentItinerary: itinerary }),
+      resetTrip: () => set({
+        step: 1,
+        destination: null,
+        dates: { from: null, to: null },
+        companions: "solo",
+        tripTypes: [],
+        budgetTier: "mid-range",
+        preferences: { flights: false, hotels: true, dietary: [], pace: "relaxed", mustSee: "" },
+        currentItinerary: null,
+      }),
       updateDay: (dayNumber, newDayData) => 
         set((state) => {
           if (!state.currentItinerary || !state.currentItinerary.days) return state;
@@ -75,10 +86,17 @@ export const usePlannerStore = create<PlannerState>()(
     }),
     {
       name: "plannora-store",
-      // Persist itinerary and language selection
-      partialize: (state) => ({ 
+      // Persist ALL trip inputs so that navigation never loses the user's destination/settings
+      partialize: (state) => ({
         currentItinerary: state.currentItinerary,
-        language: state.language 
+        language: state.language,
+        destination: state.destination,
+        dates: state.dates,
+        companions: state.companions,
+        tripTypes: state.tripTypes,
+        budgetTier: state.budgetTier,
+        preferences: state.preferences,
+        step: state.step,
       }),
     }
   )
