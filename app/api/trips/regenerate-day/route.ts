@@ -116,54 +116,44 @@ IMPORTANT RULES:
 - All activity coordinates MUST be real, accurate coordinates near ${destination}.
 - Use local currency: ${currency?.code} (symbol: ${currency?.symbol})
 - Ensure meals and activities fit the budget.
+- CRITICAL: You MUST properly escape all double quotes inside string values to prevent JSON parsing errors.
 
-Return ONLY a valid JSON object with this exact structure (a single day object):
-{
-  "dayNumber": ${dayNumber},
-  "theme": "string — exciting new theme for the day",
-  "weatherNote": "Expected weather",
-  "meals": {
-    "breakfast": { "suggestion": "restaurant name or type", "estimatedCost": "cost" },
-    "lunch": { "suggestion": "restaurant name or type", "estimatedCost": "cost" },
-    "dinner": { "suggestion": "restaurant name or type", "estimatedCost": "cost" }
-  },
-  "activities": [
-    {
-      "id": "act_new_1",
-      "time": "09:00",
-      "period": "morning",
-      "name": "Activity name",
-      "location": "Specific location, City",
-      "coordinates": { "lat": number, "lng": number },
-      "duration": "2 hours",
-      "description": "2-3 vivid sentences",
-      "estimatedCost": { "amount": 0, "currency": "${currency?.code}", "note": "price" },
-      "category": "culture | food | nature | adventure | shopping | relaxation",
-      "tips": "One insider tip",
-      "bookingRequired": false,
-      "transportToNext": {
-        "mode": "walk | subway | bus | taxi",
-        "duration": "10 min",
-        "cost": "$0",
-        "instructions": "Brief directions"
-      }
-    }
-  ]
-}
+Return ONLY the JSON matching the provided schema.
 `;
 
-    const result = await geminiModel.generateContent(prompt);
-    const text = result.response.text();
-    
-    // Robust JSON extraction
-    const jsonStart = text.indexOf("{");
-    const jsonEnd = text.lastIndexOf("}");
-    if (jsonStart === -1 || jsonEnd === -1) {
-      throw new Error("Invalid response format from AI.");
-    }
-    const cleanJson = text.substring(jsonStart, jsonEnd + 1);
+    let result;
+    let lastError;
+    let newDay;
 
-    const newDay = JSON.parse(cleanJson);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        result = await geminiModel.generateContent(prompt);
+        if (!result) throw new Error("No result returned");
+
+        const text = result.response.text();
+        
+        // Robust JSON extraction
+        const jsonStart = text.indexOf("{");
+        const jsonEnd = text.lastIndexOf("}");
+        if (jsonStart === -1 || jsonEnd === -1) {
+          throw new Error("Invalid response format from AI.");
+        }
+        let cleanJson = text.substring(jsonStart, jsonEnd + 1);
+
+        // Remove unescaped control characters like tabs or newlines which break JSON.parse
+        cleanJson = cleanJson.replace(/[\u0000-\u001F]+/g, " ");
+
+        newDay = JSON.parse(cleanJson);
+        break; // Successfully parsed!
+      } catch (err) {
+        lastError = err;
+        console.warn(`AI attempt ${attempt + 1} failed:`, err);
+        if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    if (!newDay) throw lastError || new Error("Failed after retries");
+
     return NextResponse.json({ success: true, day: newDay });
   } catch (error: any  ) {
     console.error("Gemini regenerate day error:", error);

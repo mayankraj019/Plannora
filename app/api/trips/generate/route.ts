@@ -203,88 +203,49 @@ IMPORTANT:
 - All activity coordinates MUST be real, accurate coordinates near ${destination}.
 - ALL monetary amounts MUST be in the LOCAL currency: ${currency.code} (${currency.symbol}).
 - CRITICAL: Ensure the JSON is perfectly formatted. No trailing commas. No missing quotes.
+- CRITICAL: You MUST properly escape all double quotes inside string values to prevent JSON parsing errors.
 - Keep descriptions concise to avoid truncation.
 
-Return ONLY a valid JSON object:
-{
-  "tripTitle": "string (in ${language})",
-  "summary": "string (in ${language})",
-  "highlights": ["string (in ${language})"],
-  "destinationCoordinates": { "lat": ${geo.lat}, "lng": ${geo.lng} },
-  "estimatedTotalCost": {
-    "min": number,
-    "max": number,
-    "currency": "${currency.code}",
-    "currencySymbol": "${currency.symbol}",
-    "breakdown": { 
-      "accommodation": number, 
-      "food": number, 
-      "activities": number, 
-      "transport": number 
-    }
-  },
-  "recommendedRestaurants": [
-    { 
-      "name": "string (in ${language})", 
-      "cuisine": "string (in ${language})", 
-      "priceRange": "$|$$|$$$", 
-      "location": "string (in ${language})",
-      "coordinates": { "lat": number, "lng": number }
-    }
-  ],
-  "bestTimeToVisit": "string (in ${language})",
-  "packingEssentials": ["string (in ${language})"],
-  "days": [
-    {
-      "dayNumber": number,
-      "theme": "string (in ${language})",
-      "activities": [
-        {
-          "time": "HH:MM",
-          "name": "string (in ${language})",
-          "location": "string (in ${language})",
-          "coordinates": { "lat": number, "lng": number },
-          "description": "string (in ${language})",
-          "estimatedCost": "string (in ${language})",
-          "category": "string (in ${language})",
-          "transportToNext": { "mode": "string (in ${language})", "duration": "string (in ${language})" }
-        }
-      ]
-    }
-  ]
-}
+Return ONLY the JSON matching the provided schema.
 `;
 
     let result;
     let lastError;
+    let itinerary;
     
-    // Retry logic: Try up to 2 times
-    for (let attempt = 0; attempt < 2; attempt++) {
+    // Retry logic: Try up to 3 times
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
         result = await geminiModel.generateContent(prompt);
-        if (result) break;
+        if (!result) throw new Error("No result returned");
+
+        const response = await result.response;
+        const text = response.text();
+
+        // Robust JSON extraction: find the first { and last } to ignore any AI conversational preamble
+        const jsonStart = text.indexOf("{");
+        const jsonEnd = text.lastIndexOf("}");
+        if (jsonStart === -1 || jsonEnd === -1) {
+          throw new Error("AI failed to provide a valid JSON structure");
+        }
+        
+        let cleanJson = text.substring(jsonStart, jsonEnd + 1);
+        
+        // Remove unescaped control characters like tabs or newlines which break JSON.parse
+        cleanJson = cleanJson.replace(/[\u0000-\u001F]+/g, " ");
+
+        itinerary = JSON.parse(cleanJson);
+        break; // Successfully parsed!
       } catch (err) {
         lastError = err;
         console.warn(`AI attempt ${attempt + 1} failed:`, err);
-        if (attempt === 0) await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+        if (attempt < 2) await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
       }
     }
 
-    if (!result) throw lastError || new Error("Failed after retries");
+    if (!itinerary) throw lastError || new Error("Failed after retries");
 
-    const response = await result.response;
-    const text = response.text();
 
-    // Robust JSON extraction: find the first { and last } to ignore any AI conversational preamble
-    const jsonStart = text.indexOf("{");
-    const jsonEnd = text.lastIndexOf("}");
-    if (jsonStart === -1 || jsonEnd === -1) {
-      console.error("AI failed to provide a valid JSON structure:", text);
-      throw new Error("Nexora could not build a valid itinerary structure. Please try again.");
-    }
-    const cleanJson = text.substring(jsonStart, jsonEnd + 1);
-    
-    const itinerary = JSON.parse(cleanJson);
     // Ensure destination coordinates are always set
     itinerary.destinationCoordinates = itinerary.destinationCoordinates || geo;
     // Ensure currency is always set from our detection
@@ -304,18 +265,16 @@ Return ONLY a valid JSON object:
   } catch (error: any  ) {
     console.error("Gemini generation error:", error);
 
-    // If quota exceeded or API unavailable, return a rich demo itinerary
-    const isQuotaError = error?.message?.includes("429") || error?.message?.includes("quota") || error?.message?.includes("RESOURCE_EXHAUSTED") || error?.message?.includes("404");
+    console.error("Gemini generation error:", error);
 
-    if (isQuotaError) {
-      return NextResponse.json({
-        success: true,
-        demo: true,
-        itinerary: buildDemoItinerary(destination || "Paris, France", geo, days || 3, companions || "solo", budget || "mid-range", tripTypes || ["Culture"], currency, language),
-      });
-    }
-
-    return NextResponse.json({ error: error.message || "Failed to generate itinerary" }, { status: 500 });
+    // Fallback to demo itinerary for ALL errors (quota, JSON parsing, API down, etc.)
+    // This ensures the application never completely breaks and the user always gets a response.
+    console.warn("Falling back to demo itinerary due to error.");
+    return NextResponse.json({
+      success: true,
+      demo: true,
+      itinerary: buildDemoItinerary(destination || "Paris, France", geo, days || 3, companions || "solo", budget || "mid-range", tripTypes || ["Culture"], currency, language),
+    });
   }
 }
 
