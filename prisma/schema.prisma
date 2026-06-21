@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String           @id @default(cuid())
+  email         String           @unique
+  name          String?
+  avatarUrl     String?
+  createdAt     DateTime         @default(now())
+  trips         Trip[]
+  preferences   UserPreferences?
+}
+
+model Trip {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  destination   String
+  country       String
+  coordinates   Json?     // { lat, lng } of destination center
+  startDate     DateTime?
+  endDate       DateTime?
+  durationDays  Int
+  companions    String    // "solo" | "family" | "friends" | "group"
+  tripTypes     String[]
+  budgetTier    String
+  budgetCustom  Float?
+  currency      String    @default("USD")
+  status        String    @default("draft")
+  coverImageUrl String?
+  itinerary     Json      // Full Gemini-generated itinerary JSON
+  preferences   Json?
+  shareToken    String?   @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model UserPreferences {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id])
+  currency     String   @default("USD")
+  unitSystem   String   @default("metric")
+  dietaryReqs  String[]
+}

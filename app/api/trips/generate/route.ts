@@ -1,0 +1,469 @@
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { NextRequest, NextResponse } from "next/server";
+
+// Static country to currency mapping (to avoid deprecated RestCountries API keys/network latency)
+const COUNTRY_CURRENCY_MAP: Record<string, { code: string; symbol: string }> = {
+  IN: { code: "INR", symbol: "₹" },
+  US: { code: "USD", symbol: "$" },
+  GB: { code: "GBP", symbol: "£" },
+  FR: { code: "EUR", symbol: "€" },
+  DE: { code: "EUR", symbol: "€" },
+  IT: { code: "EUR", symbol: "€" },
+  ES: { code: "EUR", symbol: "€" },
+  NL: { code: "EUR", symbol: "€" },
+  BE: { code: "EUR", symbol: "€" },
+  GR: { code: "EUR", symbol: "€" },
+  PT: { code: "EUR", symbol: "€" },
+  IE: { code: "EUR", symbol: "€" },
+  AT: { code: "EUR", symbol: "€" },
+  FI: { code: "EUR", symbol: "€" },
+  JP: { code: "JPY", symbol: "¥" },
+  CN: { code: "CNY", symbol: "¥" },
+  AU: { code: "AUD", symbol: "A$" },
+  CA: { code: "CAD", symbol: "CA$" },
+  SG: { code: "SGD", symbol: "S$" },
+  TH: { code: "THB", symbol: "฿" },
+  AE: { code: "AED", symbol: "AED" },
+  MY: { code: "MYR", symbol: "RM" },
+  ID: { code: "IDR", symbol: "Rp" },
+  VN: { code: "VND", symbol: "₫" },
+  NZ: { code: "NZD", symbol: "NZ$" },
+  ZA: { code: "ZAR", symbol: "R" },
+  KR: { code: "KRW", symbol: "₩" },
+  CH: { code: "CHF", symbol: "CHF" },
+  SE: { code: "SEK", symbol: "kr" },
+  NO: { code: "NOK", symbol: "kr" },
+  DK: { code: "DKK", symbol: "kr" },
+  RU: { code: "RUB", symbol: "₽" },
+  BR: { code: "BRL", symbol: "R$" },
+  MX: { code: "MXN", symbol: "MX$" },
+  TR: { code: "TRY", symbol: "₺" },
+  SA: { code: "SAR", symbol: "﷼" },
+  PH: { code: "PHP", symbol: "₱" },
+  HK: { code: "HKD", symbol: "HK$" },
+  TW: { code: "TWD", symbol: "NT$" },
+  EG: { code: "EGP", symbol: "E£" },
+  PK: { code: "PKR", symbol: "₨" },
+  BD: { code: "BDT", symbol: "৳" },
+  LK: { code: "LKR", symbol: "₨" },
+  NP: { code: "NPR", symbol: "₨" },
+  MV: { code: "MVR", symbol: "Rf" },
+  IL: { code: "ILS", symbol: "₪" },
+  PL: { code: "PLN", symbol: "zł" },
+  HU: { code: "HUF", symbol: "Ft" },
+  CZ: { code: "CZK", symbol: "Kč" },
+  RO: { code: "RON", symbol: "lei" },
+  UA: { code: "UAH", symbol: "₴" },
+  CL: { code: "CLP", symbol: "CLP$" },
+  CO: { code: "COP", symbol: "COL$" },
+  PE: { code: "PEN", symbol: "S/." },
+  AR: { code: "ARS", symbol: "ARS$" }
+};
+
+async function getCurrency(countryCode?: string): Promise<{ code: string; symbol: string }> {
+  if (!countryCode) return { code: "USD", symbol: "$" };
+  const codeUpper = countryCode.toUpperCase();
+  return COUNTRY_CURRENCY_MAP[codeUpper] || { code: "USD", symbol: "$" };
+}
+
+// Geocode a destination using MapTiler's Geocoding API
+async function geocodeDestination(destination: string): Promise<{ lat: number; lng: number; name: string; countryCode?: string }> {
+  const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
+  if (!maptilerKey) return { lat: 35.6762, lng: 139.6503, name: destination };
+
+  try {
+    const encoded = encodeURIComponent(destination);
+    const res = await fetch(
+      `https://api.maptiler.com/geocoding/${encoded}.json?key=${maptilerKey}&limit=1`
+    );
+    const data = await res.json();
+    if (data.features && data.features.length > 0) {
+      const [lng, lat] = data.features[0].center;
+      let countryCode = data.features[0].properties?.country_code || data.features[0].country_code;
+      if (!countryCode && data.features[0].context) {
+        const countryFeature = data.features[0].context.find((c: any  ) => c.id.startsWith("country") || c.country_code);
+        if (countryFeature) countryCode = countryFeature.country_code || countryFeature.short_code;
+      }
+      return { lat, lng, name: data.features[0].place_name || destination, countryCode };
+    }
+  } catch (e) {
+    console.error("Geocoding failed:", e);
+  }
+  return { lat: 35.6762, lng: 139.6503, name: destination };
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
+  const { destination, days, companions, tripTypes, budget, preferences, language } = body;
+
+  // Geocode destination early so both AI and fallback can use it
+  const geo = await geocodeDestination(destination || "Paris, France");
+  // Dynamically fetch actual local currency via RestCountries API using the country code
+  const currency = await getCurrency(geo.countryCode);
+
+  try {
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!apiKey) {
+      throw new Error("Gemini API is not configured. Please set GOOGLE_GENERATIVE_AI_API_KEY in your .env file.");
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const geminiModel = genAI.getGenerativeModel(
+      {
+        model: "gemini-2.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              tripTitle: { type: SchemaType.STRING },
+              summary: { type: SchemaType.STRING },
+              highlights: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+              destinationCoordinates: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  lat: { type: SchemaType.NUMBER },
+                  lng: { type: SchemaType.NUMBER }
+                },
+                required: ["lat", "lng"]
+              },
+              estimatedTotalCost: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  min: { type: SchemaType.NUMBER },
+                  max: { type: SchemaType.NUMBER },
+                  currency: { type: SchemaType.STRING },
+                  currencySymbol: { type: SchemaType.STRING },
+                  breakdown: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                      accommodation: { type: SchemaType.NUMBER },
+                      food: { type: SchemaType.NUMBER },
+                      activities: { type: SchemaType.NUMBER },
+                      transport: { type: SchemaType.NUMBER }
+                    },
+                    required: ["accommodation", "food", "activities", "transport"]
+                  }
+                },
+                required: ["min", "max", "currency", "currencySymbol", "breakdown"]
+              },
+              recommendedRestaurants: {
+                type: SchemaType.ARRAY,
+                items: {
+                  type: SchemaType.OBJECT,
+                  properties: {
+                    name: { type: SchemaType.STRING },
+                    cuisine: { type: SchemaType.STRING },
+                    priceRange: { type: SchemaType.STRING },
+                    location: { type: SchemaType.STRING },
+                    coordinates: {
+                      type: SchemaType.OBJECT,
+                      properties: {
+                        lat: { type: SchemaType.NUMBER },
+                        lng: { type: SchemaType.NUMBER }
+                      },
+                      required: ["lat", "lng"]
+                    }
+                  },
+                  required: ["name", "cuisine", "priceRange", "location", "coordinates"]
+                }
+              },
+              bestTimeToVisit: { type: SchemaType.STRING },
+              packingEssentials: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+              famousFor: {
+                type: SchemaType.ARRAY,
+                items: { type: SchemaType.STRING }
+              },
+              mustSeeAttractions: {
+                type: SchemaType.ARRAY,
+                items: {
+                  type: SchemaType.OBJECT,
+                  properties: {
+                    name: { type: SchemaType.STRING },
+                    description: { type: SchemaType.STRING },
+                    whyRecommend: { type: SchemaType.STRING },
+                    coordinates: {
+                      type: SchemaType.OBJECT,
+                      properties: {
+                        lat: { type: SchemaType.NUMBER },
+                        lng: { type: SchemaType.NUMBER }
+                      },
+                      required: ["lat", "lng"]
+                    }
+                  },
+                  required: ["name", "description", "whyRecommend", "coordinates"]
+                }
+              },
+              days: {
+                type: SchemaType.ARRAY,
+                items: {
+                  type: SchemaType.OBJECT,
+                  properties: {
+                    dayNumber: { type: SchemaType.NUMBER },
+                    theme: { type: SchemaType.STRING },
+                    activities: {
+                      type: SchemaType.ARRAY,
+                      items: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                          time: { type: SchemaType.STRING },
+                          name: { type: SchemaType.STRING },
+                          location: { type: SchemaType.STRING },
+                          coordinates: {
+                            type: SchemaType.OBJECT,
+                            properties: {
+                              lat: { type: SchemaType.NUMBER },
+                              lng: { type: SchemaType.NUMBER }
+                            },
+                            required: ["lat", "lng"]
+                          },
+                          description: { type: SchemaType.STRING },
+                          estimatedCost: { type: SchemaType.STRING },
+                          category: { type: SchemaType.STRING },
+                          transportToNext: {
+                            type: SchemaType.OBJECT,
+                            properties: {
+                              mode: { type: SchemaType.STRING },
+                              duration: { type: SchemaType.STRING }
+                            },
+                            required: ["mode", "duration"]
+                          }
+                        },
+                        required: ["time", "name", "location", "coordinates", "description", "estimatedCost", "category", "transportToNext"]
+                      }
+                    }
+                  },
+                  required: ["dayNumber", "theme", "activities"]
+                }
+              }
+            },
+            required: ["tripTitle", "summary", "highlights", "destinationCoordinates", "estimatedTotalCost", "recommendedRestaurants", "bestTimeToVisit", "packingEssentials", "famousFor", "mustSeeAttractions", "days"]
+          },
+          temperature: 0.7,
+          topP: 0.8,
+          maxOutputTokens: 8192,
+        },
+      },
+      { apiVersion: "v1beta" }
+    );
+
+    // (currency already detected above)
+
+    const prompt = `
+You are Plannora's expert AI travel planner.
+
+CRITICAL: EVERY SINGLE STRING VALUE IN THE JSON RESPONSE MUST BE IN THE TARGET LANGUAGE. 
+NO ENGLISH ALLOWED EXCEPT FOR THE JSON KEYS THEMSELVES.
+
+TARGET LANGUAGE: ${language || "English"}
+
+CONTEXT & INSTRUCTIONS:
+- Generate a detailed, practical, inspiring day-by-day travel itinerary.
+- EVERYTHING (Trip Title, Summary, Highlights, Packing List, Activity Names, Activity Descriptions, Locations, Cuisine Types, Tips, etc.) MUST be in ${language || "English"}.
+- Provide a list of key things the destination is "famousFor" (e.g., local delicacies, landmarks, cultural elements).
+- Recommend local "mustSeeAttractions" (experiences, sights, or hidden gems users should not miss) with a brief description and why you recommend it.
+- If the language is an Indian regional language (Hindi, Marathi, Bengali, Tamil, etc.), use the correct script and ensure natural phrasing.
+- Transliterate names of people or specific brands if they don't have a direct translation, but keep them in the target script (e.g., use Devanagari for Hindi).
+
+Trip Details:
+- Destination: ${destination} (approximate center coordinates: lat ${geo.lat.toFixed(4)}, lng ${geo.lng.toFixed(4)})
+- Duration: ${days || 3} days
+- Travel companions: ${companions}
+- Trip vibe/type: ${tripTypes?.join(", ") || "General"}
+- Budget tier: ${budget}
+- Special preferences: ${JSON.stringify(preferences)}
+
+IMPORTANT:
+- All activity coordinates MUST be real, accurate coordinates near ${destination}.
+- ALL monetary amounts MUST be in the LOCAL currency: ${currency.code} (${currency.symbol}).
+- CRITICAL: Ensure the JSON is perfectly formatted. No trailing commas. No missing quotes.
+- CRITICAL: You MUST properly escape all double quotes inside string values to prevent JSON parsing errors.
+- Keep descriptions concise to avoid truncation.
+
+Return ONLY the JSON matching the provided schema.
+`;
+
+    let result;
+    let lastError;
+    let itinerary;
+    
+    // Retry logic: Try up to 3 times
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        result = await geminiModel.generateContent(prompt);
+        if (!result) throw new Error("No result returned");
+
+        const response = await result.response;
+        const text = response.text();
+
+        // Robust JSON extraction: find the first { and last } to ignore any AI conversational preamble
+        const jsonStart = text.indexOf("{");
+        const jsonEnd = text.lastIndexOf("}");
+        if (jsonStart === -1 || jsonEnd === -1) {
+          throw new Error("AI failed to provide a valid JSON structure");
+        }
+        
+        let cleanJson = text.substring(jsonStart, jsonEnd + 1);
+        
+        // Remove unescaped control characters like tabs or newlines which break JSON.parse
+        cleanJson = cleanJson.replace(/[\u0000-\u001F]+/g, " ");
+
+        itinerary = JSON.parse(cleanJson);
+        break; // Successfully parsed!
+      } catch (err) {
+        lastError = err;
+        console.warn(`AI attempt ${attempt + 1} failed:`, err);
+        if (attempt < 2) await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+      }
+    }
+
+    if (!itinerary) throw lastError || new Error("Failed after retries");
+
+
+    // Ensure destination coordinates are always set
+    itinerary.destinationCoordinates = itinerary.destinationCoordinates || geo;
+    // Ensure currency is always set from our detection
+    if (itinerary.estimatedTotalCost) {
+      itinerary.estimatedTotalCost.currency = itinerary.estimatedTotalCost.currency || currency.code;
+      itinerary.estimatedTotalCost.currencySymbol = itinerary.estimatedTotalCost.currencySymbol || currency.symbol;
+    }
+    // Normalize restaurant priceRange: replace $ / $$ / $$$ with local currency symbol
+    if (itinerary.recommendedRestaurants && currency.symbol !== "$") {
+      itinerary.recommendedRestaurants = itinerary.recommendedRestaurants.map((r: any  ) => ({
+        ...r,
+        priceRange: r.priceRange?.replace(/\$/g, currency.symbol)
+      }));
+    }
+
+    return NextResponse.json({ success: true, itinerary });
+  } catch (error: any  ) {
+    console.error("Gemini generation error:", error);
+
+    console.error("Gemini generation error:", error);
+
+    // Fallback to demo itinerary for ALL errors (quota, JSON parsing, API down, etc.)
+    // This ensures the application never completely breaks and the user always gets a response.
+    console.warn("Falling back to demo itinerary due to error.");
+    return NextResponse.json({
+      success: true,
+      demo: true,
+      itinerary: buildDemoItinerary(destination || "Paris, France", geo, days || 3, companions || "solo", budget || "mid-range", tripTypes || ["Culture"], currency, language),
+    });
+  }
+}
+
+function buildDemoItinerary(destination: string, geo: { lat: number; lng: number }, days: number, companions: string, budget: string, tripTypes: string[], currency: { code: string; symbol: string }, language?: string) {
+  const lang = language?.toLowerCase() || "english";
+  const isHindi = lang === "hindi";
+  const isMarathi = lang === "marathi";
+  
+  const budgetMultiplier = budget === "luxury" ? 3 : budget === "budget" ? 0.5 : 1;
+  const currencyScale: Record<string, number> = {
+    INR: 80, JPY: 150, USD: 1, EUR: 0.92,
+  };
+  const scale = currencyScale[currency.code] || 1;
+  const basePerDay = Math.round(150 * budgetMultiplier * scale);
+
+  // Localization Maps
+  const loc = {
+    title: isHindi ? `${destination} की यात्रा` : isMarathi ? `${destination} सहल` : `${destination} Adventure`,
+    summary: isHindi 
+      ? `${destination} की एक अविश्वसनीय ${days} दिवसीय यात्रा, जो आपके लिए तैयार की गई है। (नोट: एआई अभी व्यस्त है, यह एक डेमो योजना है)`
+      : isMarathi
+      ? `${destination} ची एक अविश्वसनीय ${days} दिवसांची सहल, तुमच्यासाठी खास तयार केलेली. (टीप: AI सध्या व्यस्त आहे, ही एक नमुना योजना आहे)`
+      : `An incredible ${days}-day journey through ${destination}. (Note: AI is busy, this is a demo)`,
+    highlights: isHindi 
+      ? [`${destination} के प्रमुख स्थलों का अन्वेषण करें`, "स्थानीय व्यंजनों का स्वाद लें", "सांस्कृतिक विरासत का अनुभव करें"]
+      : isMarathi
+      ? [`${destination} मधील प्रमुख ठिकाणांना भेट द्या`, "स्थानिक खाद्यपदार्थांचा आस्वाद घ्या", "सांस्कृतिक वारसा अनुभवा"]
+      : ["Explore iconic landmarks", "Savor local cuisine", "Experience local culture"],
+    packing: isHindi
+      ? ["आरामदायक जूते", "पावर एडाप्टर", "हल्के कपड़े", "सनस्क्रीन"]
+      : isMarathi
+      ? ["आरामदायी शूज", "पॉवर अडॅप्टर", "हलके कपडे", "सनस्क्रीन"]
+      : ["Comfortable shoes", "Power adapter", "Light layers", "Sunscreen"],
+    dayTheme: isHindi ? "आगमन और अन्वेषण" : isMarathi ? "आगमन आणि शोध" : "Arrival & Discovery",
+    act1Name: isHindi ? "शहर भ्रमण" : isMarathi ? "शहर दर्शन" : "City Walking Tour",
+    act1Desc: isHindi ? "शहर के ऐतिहासिक केंद्र का भ्रमण।" : isMarathi ? "शहराच्या ऐतिहासिक भागाची सहल." : "Explore the historic center.",
+    act2Name: isHindi ? "स्थानीय बाजार" : isMarathi ? "स्थानिक बाजार" : "Local Market",
+    act2Desc: isHindi ? "प्रसिद्ध बाजारों में खरीदारी और स्ट्रीट फूड।" : isMarathi ? "प्रसिद्ध बाजारपेठेत खरेदी आणि स्ट्रीट फूड." : "Shopping and street food at famous markets.",
+    categories: { culture: isHindi ? "संस्कृति" : isMarathi ? "संस्कृती" : "culture", food: isHindi ? "भोजन" : isMarathi ? "खाद्य" : "food" }
+  };
+
+  return {
+    tripTitle: loc.title,
+    summary: loc.summary,
+    highlights: loc.highlights,
+    destinationCoordinates: { lat: geo.lat, lng: geo.lng },
+    estimatedTotalCost: {
+      min: Math.round(basePerDay * days * 0.8),
+      max: Math.round(basePerDay * days * 1.2),
+      currency: currency.code,
+      currencySymbol: currency.symbol,
+      breakdown: {
+        accommodation: Math.round(basePerDay * days * 0.4),
+        food: Math.round(basePerDay * days * 0.25),
+        activities: Math.round(basePerDay * days * 0.2),
+        transport: Math.round(basePerDay * days * 0.1),
+      }
+    },
+    recommendedRestaurants: [
+      { 
+        name: "Local Flavors", 
+        cuisine: loc.categories.food, 
+        priceRange: currency.symbol, 
+        location: destination,
+        coordinates: { lat: geo.lat + 0.003, lng: geo.lng - 0.002 }
+      }
+    ],
+    bestTimeToVisit: isHindi ? "अक्टूबर से मार्च" : isMarathi ? "ऑक्टोबर ते मार्च" : "October to March",
+    packingEssentials: loc.packing,
+    famousFor: isHindi 
+      ? ["स्थानीय संस्कृति", "ऐतिहासिक वास्तुकला", "स्वादिष्ट व्यंजन"]
+      : isMarathi
+      ? ["स्थानिक संस्कृती", "ऐतिहासिक वास्तू", "चवदार जेवण"]
+      : ["Local Culture", "Historical Architecture", "Delicious Cuisine"],
+    mustSeeAttractions: [
+      {
+        name: isHindi ? "ऐतिहासिक केंद्र" : isMarathi ? "ऐतिहासिक केंद्र" : "Historic Center",
+        description: isHindi ? "शहर के सबसे पुराने और समृद्ध भाग का भ्रमण करें।" : isMarathi ? "शहराच्या सर्वात जुन्या भागाला भेट द्या." : "Explore the oldest and most culturally rich part of the city.",
+        whyRecommend: isHindi ? "अद्भुत वास्तुकला और जीवंत माहौल के लिए।" : isMarathi ? "सुंदर वास्तुकला आणि वातावरणासाठी." : "For stunning architecture and vibrant local atmosphere.",
+        coordinates: { lat: geo.lat + 0.002, lng: geo.lng + 0.003 }
+      },
+      {
+        name: isHindi ? "स्थानीय संग्रहालय" : isMarathi ? "स्थानिक संग्रहालय" : "Local Museum",
+        description: isHindi ? "यहाँ के समृद्ध इतिहास और कला को करीब से देखें।" : isMarathi ? "येथील समृद्ध इतिहास आणि कला जवळून पहा." : "Get a deep dive into the region's rich history and fine art.",
+        whyRecommend: isHindi ? "ज्ञानवर्धक और समृद्ध अनुभव के लिए।" : isMarathi ? "ज्ञानवर्धक अनुभवासाठी." : "Highly educational and rich with cultural insights.",
+        coordinates: { lat: geo.lat - 0.003, lng: geo.lng - 0.001 }
+      }
+    ],
+    days: Array.from({ length: days }, (_, i) => ({
+      dayNumber: i + 1,
+      theme: loc.dayTheme,
+      activities: [
+        {
+          id: `demo_${i}_1`,
+          time: "09:00",
+          name: loc.act1Name,
+          location: destination,
+          coordinates: { lat: geo.lat + 0.001, lng: geo.lng + 0.001 },
+          description: loc.act1Desc,
+          estimatedCost: "₹500",
+          category: loc.categories.culture,
+          transportToNext: { mode: "Walk", duration: "10 min" }
+        },
+        {
+          id: `demo_${i}_2`,
+          time: "14:00",
+          name: loc.act2Name,
+          location: destination,
+          coordinates: { lat: geo.lat - 0.002, lng: geo.lng + 0.002 },
+          description: loc.act2Desc,
+          estimatedCost: "₹1000",
+          category: loc.categories.food,
+          transportToNext: { mode: "Taxi", duration: "15 min" }
+        }
+      ]
+    }))
+  };
+}
