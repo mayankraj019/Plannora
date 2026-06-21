@@ -105,7 +105,7 @@ export default function PlanWizard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="w-full max-w-2xl bg-white dark:bg-[#111727] border border-amber/10 shadow-2xl rounded-2xl p-8 lg:p-12 min-h-[460px] flex flex-col relative overflow-hidden">
+      <div className="w-full max-w-2xl bg-white dark:bg-[#111727] border border-amber/10 shadow-2xl rounded-2xl p-5 sm:p-8 lg:p-12 min-h-[400px] sm:min-h-[460px] flex flex-col relative overflow-visible">
         {/* Subtle decorative glow */}
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-amber/10 rounded-full blur-[80px] pointer-events-none" />
 
@@ -240,16 +240,16 @@ export default function PlanWizard() {
 
             {step === 6 && (
               <div className="flex flex-col gap-6">
-                <h2 className="text-4xl font-display font-bold">What's your budget?</h2>
-                <div className="flex flex-col gap-4 mt-4">
+                <h2 className="text-2xl sm:text-4xl font-display font-bold">What&apos;s your budget?</h2>
+                <div className="flex flex-col gap-3 sm:gap-4 mt-3 sm:mt-4">
                   {["budget", "mid-range", "luxury"].map(tier => (
                     <button 
                       key={tier}
                       onClick={() => setBudgetTier(tier)}
-                      className={`p-6 rounded-xl border-2 flex items-center justify-between transition-all ${budgetTier === tier ? "border-amber bg-amber/10 shadow-md scale-[1.01]" : "border-amber/10 hover:border-amber/30 bg-ivory/30 dark:bg-midnight/30"}`}
+                      className={`p-4 sm:p-6 rounded-xl border-2 flex items-center justify-between transition-all ${budgetTier === tier ? "border-amber bg-amber/10 shadow-md scale-[1.01]" : "border-amber/10 hover:border-amber/30 bg-ivory/30 dark:bg-midnight/30"}`}
                     >
-                      <span className="font-semibold capitalize text-xl">{tier}</span>
-                      <span className="text-amber font-display font-bold tracking-widest text-xl">
+                      <span className="font-semibold capitalize text-base sm:text-xl">{tier}</span>
+                      <span className="text-amber font-display font-bold tracking-widest text-base sm:text-xl">
                         {tier === "budget" ? "$" : tier === "mid-range" ? "$$" : "$$$"}
                       </span>
                     </button>
@@ -273,7 +273,7 @@ export default function PlanWizard() {
         </AnimatePresence>
 
         {/* Footer Actions */}
-        <div className="mt-12 pt-6 flex items-center justify-between border-t border-amber/10 z-0">
+        <div className="mt-6 sm:mt-12 pt-4 sm:pt-6 flex items-center justify-between border-t border-amber/10 z-0">
           <Button variant="ghost" onClick={handleBack} className="gap-2 text-midnight/60 dark:text-ivory/60 hover:text-midnight dark:hover:text-ivory">
             <ArrowLeft className="w-5 h-5" /> Back
           </Button>

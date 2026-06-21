@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
         `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query + " travel")}&client_id=${clientKey}&per_page=1`,
         { next: { revalidate: 86400 } } // Cache in Next.js data cache for 24 hours
       );
-      
+
       if (res.ok) {
         const data = await res.json();
         if (data.results && data.results.length > 0) {

@@ -301,7 +301,7 @@ export default function TripPage() {
           <div className="w-full lg:w-2/3 flex flex-col gap-8">
 
             {/* Tab Switcher */}
-            <div className="flex gap-2 bg-white dark:bg-midnight/50 p-2 rounded-2xl border border-ivory/20 shadow-sm">
+            <div className="flex gap-1.5 sm:gap-2 bg-white dark:bg-midnight/50 p-1.5 sm:p-2 rounded-2xl border border-ivory/20 shadow-sm overflow-x-auto scrollbar-none">
               {[
                 { id: "itinerary", label: "Itinerary" },
                 { id: "guide", label: "✨ Guide" },
@@ -311,7 +311,7 @@ export default function TripPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.id ? "bg-amber text-white shadow-md" : "hover:bg-amber/10 text-midnight/60 dark:text-ivory/60"}`}
+                  className={`flex-1 min-w-0 py-2 sm:py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${activeTab === tab.id ? "bg-amber text-white shadow-md" : "hover:bg-amber/10 text-midnight/60 dark:text-ivory/60"}`}
                 >
                   {tab.label}
                 </button>
