@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { MapPin, Calendar, Users, Wallet, Share, Download, Trash2, Edit2, MessageSquare, Clock, Coffee, UtensilsCrossed, Moon, TrendingUp, RefreshCw, BedDouble, ExternalLink, Plane, TrainFront, Bus, Loader2 } from "lucide-react";
+import { MapPin, Calendar, Users, Wallet, Share, Download, Trash2, Edit2, MessageSquare, Clock, Coffee, UtensilsCrossed, Moon, TrendingUp, RefreshCw, BedDouble, ExternalLink, Plane, TrainFront, Bus, Loader2, Compass } from "lucide-react";
 
 const ItineraryMap = dynamic(() => import("@/components/map/ItineraryMap"), {
   ssr: false,
@@ -13,6 +13,12 @@ const ItineraryMap = dynamic(() => import("@/components/map/ItineraryMap"), {
     </div>
   ),
 });
+
+/* ── Travel Mode (plugin — isolated, feature-flagged) ── */
+const TravelModeOverlay = dynamic(
+  () => import("@/components/travel-mode/TravelModeOverlay"),
+  { ssr: false, loading: () => null }
+);
 import DestinationGallery from "@/components/ui/DestinationGallery";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -43,6 +49,7 @@ export default function TripPage() {
   const [activeTab, setActiveTab] = useState<"itinerary" | "guide" | "restaurants" | "budget">("itinerary");
   const [regeneratingDay, setRegeneratingDay] = useState<number | null>(null);
   const [addingAttractionIdx, setAddingAttractionIdx] = useState<number | null>(null);
+  const [travelModeActive, setTravelModeActive] = useState(false);
   const { step, setStep, currentItinerary, updateDay, addActivity, deleteActivity, language } = usePlannerStore();
 
   if (!currentItinerary) {
@@ -137,31 +144,38 @@ export default function TripPage() {
   };
 
   // Extract all activities and restaurants for the map
-  const allActivities = currentItinerary.days?.flatMap((day: any  ) => day.activities) || [];
-  const mapMarkers = [
-    ...allActivities.map((a: any  ) => ({ ...a, type: 'activity' })),
-    ...(currentItinerary.recommendedRestaurants || currentItinerary.restaurantRecommendations || []).map((r: any  , i: number) => ({
-      ...r,
-      id: `rest_${i}`,
-      category: 'food',
-      type: 'restaurant',
-      time: "🍽️"
-    })),
-    ...(currentItinerary.mustSeeAttractions || []).map((att: any, i: number) => ({
-      ...att,
-      id: `att_${i}`,
-      category: 'attraction',
-      type: 'attraction',
-      time: "🌟",
-      location: att.name
-    }))
-  ];
-  
+  // Memoised so that ItineraryMap's useEffect([activities]) doesn't fire on every re-render
+  const allActivities = useMemo(
+    () => currentItinerary.days?.flatMap((day: any) => day.activities) || [],
+    [currentItinerary.days]
+  );
+  const mapMarkers = useMemo(
+    () => [
+      ...allActivities.map((a: any) => ({ ...a, type: 'activity' })),
+      ...(currentItinerary.recommendedRestaurants || currentItinerary.restaurantRecommendations || []).map((r: any, i: number) => ({
+        ...r,
+        id: `rest_${i}`,
+        category: 'food',
+        type: 'restaurant',
+        time: "🍽️"
+      })),
+      ...(currentItinerary.mustSeeAttractions || []).map((att: any, i: number) => ({
+        ...att,
+        id: `att_${i}`,
+        category: 'attraction',
+        type: 'attraction',
+        time: "🌟",
+        location: att.name
+      }))
+    ],
+    [allActivities, currentItinerary.recommendedRestaurants, currentItinerary.restaurantRecommendations, currentItinerary.mustSeeAttractions]
+  );
+
   // ALWAYS use geocoded destinationCoordinates first — this is set client-side during generation
   const mapCenter = (
     currentItinerary.destinationCoordinates?.lat && currentItinerary.destinationCoordinates?.lng
       ? currentItinerary.destinationCoordinates
-      : allActivities.find((a: any  ) => a.coordinates?.lat)?.coordinates
+      : allActivities.find((a: any) => a.coordinates?.lat)?.coordinates
   ) || { lat: 48.8566, lng: 2.3522 }; // Paris as last-resort (neutral default)
 
   const cost = currentItinerary.estimatedTotalCost;
@@ -195,19 +209,19 @@ export default function TripPage() {
               {/* Key Stats */}
               <div className="grid grid-cols-2 gap-3 bg-white dark:bg-midnight/50 p-5 rounded-2xl border border-ivory/20 shadow-sm">
                 <div className="flex flex-col gap-1">
-                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><Calendar className="w-3 h-3"/> Dates</span>
+                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><Calendar className="w-3 h-3" /> Dates</span>
                   <span className="font-semibold text-sm">{currentItinerary.user_dates}</span>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><MapPin className="w-3 h-3"/> Location</span>
+                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><MapPin className="w-3 h-3" /> Location</span>
                   <span className="font-semibold text-sm">{currentItinerary.user_destination}</span>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><Users className="w-3 h-3"/> Travelers</span>
+                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><Users className="w-3 h-3" /> Travelers</span>
                   <span className="font-semibold text-sm capitalize">{currentItinerary.user_companions}</span>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><Wallet className="w-3 h-3"/> Budget</span>
+                  <span className="flex items-center gap-2 text-xs text-midnight/60 dark:text-ivory/60"><Wallet className="w-3 h-3" /> Budget</span>
                   <span className="font-semibold text-sm capitalize">{currentItinerary.user_budget}</span>
                 </div>
               </div>
@@ -248,11 +262,20 @@ export default function TripPage() {
 
               {/* Actions */}
               <div className="flex flex-wrap gap-3">
-                <Button variant="outline" className="flex-1 gap-2" onClick={handleShare}><Share className="w-4 h-4"/> Share</Button>
-                <Button variant="outline" className="flex-1 gap-2" onClick={handlePrint}><Download className="w-4 h-4"/> PDF</Button>
+                <Button variant="outline" className="flex-1 gap-2" onClick={handleShare}><Share className="w-4 h-4" /> Share</Button>
+                <Button variant="outline" className="flex-1 gap-2" onClick={handlePrint}><Download className="w-4 h-4" /> PDF</Button>
                 <Button className="w-full gap-2 bg-gradient-to-r from-amber to-coral hover:opacity-90 border-0" onClick={handleBookHotels}>
                   <BedDouble className="w-4 h-4" /> Book Hotels <ExternalLink className="w-3 h-3 opacity-70 ml-auto" />
                 </Button>
+                {/* ── Travel Mode (plugin) ── */}
+                {process.env.NEXT_PUBLIC_TRAVEL_MODE_ENABLED !== "false" && (
+                  <Button
+                    className="w-full gap-2 bg-gradient-to-r from-teal to-cyan text-midnight font-bold hover:opacity-90 border-0 shadow-[0_4px_20px_rgba(0,245,212,0.25)]"
+                    onClick={() => setTravelModeActive(true)}
+                  >
+                    <Compass className="w-4 h-4" /> Start Journey
+                  </Button>
+                )}
               </div>
 
               {/* Book Tickets Section */}
@@ -301,7 +324,7 @@ export default function TripPage() {
           <div className="w-full lg:w-2/3 flex flex-col gap-8">
 
             {/* Tab Switcher */}
-            <div className="flex gap-1.5 sm:gap-2 bg-white dark:bg-midnight/50 p-1.5 sm:p-2 rounded-2xl border border-ivory/20 shadow-sm overflow-x-auto scrollbar-none">
+            <div className="grid grid-cols-4 gap-2 bg-white dark:bg-midnight/50 p-1.5 sm:p-2 rounded-2xl border border-ivory/20 shadow-sm">
               {[
                 { id: "itinerary", label: "Itinerary" },
                 { id: "guide", label: "✨ Guide" },
@@ -311,7 +334,7 @@ export default function TripPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-1 min-w-0 py-2 sm:py-2.5 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${activeTab === tab.id ? "bg-amber text-white shadow-md" : "hover:bg-amber/10 text-midnight/60 dark:text-ivory/60"}`}
+                  className={`w-full min-w-0 py-2 sm:py-2.5 px-1 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all text-center overflow-hidden ${activeTab === tab.id ? "bg-amber text-white shadow-md" : "hover:bg-amber/10 text-midnight/60 dark:text-ivory/60"}`}
                 >
                   {tab.label}
                 </button>
@@ -344,14 +367,14 @@ export default function TripPage() {
 
 
                 {/* Day-by-Day Timeline */}
-                {currentItinerary.days?.map((day: any  ) => (
+                {currentItinerary.days?.map((day: any) => (
                   <div key={day.dayNumber} className="bg-white dark:bg-midnight/50 rounded-3xl border border-amber/10 shadow-xl overflow-hidden">
                     <div className="bg-gradient-to-r from-amber to-coral p-6 text-white flex justify-between items-start">
                       <div>
                         <h2 className="text-2xl font-display font-bold">Day {day.dayNumber} — {day.theme}</h2>
                         {day.weatherNote && <p className="opacity-90 text-sm mt-1">{day.weatherNote}</p>}
                       </div>
-                      <button 
+                      <button
                         onClick={() => handleRegenerateDay(day.dayNumber, day.theme)}
                         disabled={regeneratingDay === day.dayNumber}
                         className="flex items-center gap-1.5 text-xs font-semibold bg-white/20 hover:bg-white/30 transition-colors px-3 py-1.5 rounded-full disabled:opacity-50"
@@ -382,7 +405,7 @@ export default function TripPage() {
                     )}
 
                     <div className="p-6 lg:p-8 flex flex-col gap-8">
-                      {day.activities?.map((act: any  , index: number) => (
+                      {day.activities?.map((act: any, index: number) => (
                         <motion.div
                           key={act.id || index}
                           className="relative pl-8"
@@ -409,11 +432,11 @@ export default function TripPage() {
                               </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-4 text-xs text-midnight/60 dark:text-ivory/60 mb-4">
-                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3"/> {act.location}</span>
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {act.location}</span>
                               <span className="flex items-center gap-1 uppercase tracking-widest">{act.category}</span>
                               <span className="flex items-center gap-1 font-semibold text-green-500">
-                                {typeof act.estimatedCost === 'object' 
-                                  ? `${act.estimatedCost.currency || ""} ${act.estimatedCost.amount}` 
+                                {typeof act.estimatedCost === 'object'
+                                  ? `${act.estimatedCost.currency || ""} ${act.estimatedCost.amount}`
                                   : (act.estimatedCost || "Free")}
                               </span>
                             </div>
@@ -548,7 +571,7 @@ export default function TripPage() {
                   </div>
                   <div className="p-6 flex flex-col gap-4">
                     {restaurants.length > 0 ? (
-                      restaurants.map((r: any  , i: number) => (
+                      restaurants.map((r: any, i: number) => (
                         <div key={i} className="flex items-start justify-between gap-4 p-4 bg-ivory/40 dark:bg-midnight/30 rounded-xl border border-ivory/20 hover:border-amber/30 transition-colors">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-1 flex-wrap">
@@ -556,7 +579,7 @@ export default function TripPage() {
                               <span className={`text-sm font-bold ${getPriceColor(r.priceRange)}`}>{r.priceRange}</span>
                               <Badge>{r.cuisine}</Badge>
                             </div>
-                            <p className="text-xs text-midnight/40 dark:text-ivory/40 flex items-center gap-1"><MapPin className="w-3 h-3"/> {r.location}</p>
+                            <p className="text-xs text-midnight/40 dark:text-ivory/40 flex items-center gap-1"><MapPin className="w-3 h-3" /> {r.location}</p>
                           </div>
                         </div>
                       ))
@@ -630,18 +653,26 @@ export default function TripPage() {
           <div className="absolute top-4 left-4 z-10 bg-white/90 dark:bg-midnight/90 backdrop-blur-md px-4 py-2 rounded-lg shadow-lg font-semibold border border-ivory/20 text-sm">
             📍 {currentItinerary.user_destination} Route Map
           </div>
-            {mapMarkers.length > 0 && (
-              <ItineraryMap
-                activities={mapMarkers}
-                activeActivityId={activeId}
-                onActivityClick={setActiveId}
-              />
-            )}
+          {mapMarkers.length > 0 && (
+            <ItineraryMap
+              activities={mapMarkers}
+              activeActivityId={activeId}
+              onActivityClick={setActiveId}
+            />
+          )}
         </div>
 
       </div>
 
 
+      {/* ── Travel Mode Overlay (plugin — renders on top of everything) ── */}
+      {travelModeActive && (
+        <TravelModeOverlay
+          itinerary={currentItinerary}
+          mapCenter={mapCenter}
+          onClose={() => setTravelModeActive(false)}
+        />
+      )}
 
     </div>
   );

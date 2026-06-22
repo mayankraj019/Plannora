@@ -35,11 +35,18 @@ export default function ItineraryMap({ activities, activeActivityId, onActivityC
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maptilersdk.Map | null>(null);
   const markers = useRef<maptilersdk.Marker[]>([]);
+  const initialLoad = useRef(true);
+  // Keep latest values in refs so addMarkersAndRoutes never uses stale closures
+  const activitiesRef = useRef(activities);
+  activitiesRef.current = activities;
+  const onClickRef = useRef(onActivityClick);
+  onClickRef.current = onActivityClick;
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    const firstWithCoords = activities.find(a => a.coordinates?.lat);
+    const acts = activitiesRef.current;
+    const firstWithCoords = acts.find(a => a.coordinates?.lat);
     const center = firstWithCoords
       ? [firstWithCoords.coordinates.lng, firstWithCoords.coordinates.lat]
       : [0, 20];
@@ -64,8 +71,15 @@ export default function ItineraryMap({ activities, activeActivityId, onActivityC
     map.current.on("load", () => {
       addMarkersAndRoutes();
       // Auto-trigger geolocation if no activities are present or if explicitly requested
-      if (activities.length === 0 || traceLiveLocation) {
+      if (activitiesRef.current.length === 0 || traceLiveLocation) {
         geolocate.trigger();
+      }
+    });
+
+    // Safety net: re-draw markers once the map becomes idle (handles mobile race conditions)
+    map.current.once("idle", () => {
+      if (markers.current.length === 0 && activitiesRef.current.length > 0) {
+        addMarkersAndRoutes();
       }
     });
 
@@ -78,12 +92,15 @@ export default function ItineraryMap({ activities, activeActivityId, onActivityC
   const addMarkersAndRoutes = () => {
     if (!map.current) return;
 
+    // Always read the LATEST activities from the ref — never rely on closure
+    const acts = activitiesRef.current;
+
     markers.current.forEach(m => m.remove());
     markers.current = [];
 
     const coords: [number, number][] = [];
 
-    activities.forEach((activity, index) => {
+    acts.forEach((activity, index) => {
       if (!activity.coordinates || typeof activity.coordinates.lat !== 'number') return;
       const { lat, lng } = activity.coordinates;
       if ((activity as any).type === 'activity') {
@@ -92,6 +109,7 @@ export default function ItineraryMap({ activities, activeActivityId, onActivityC
 
       const el = document.createElement("div");
       el.className = "plannora-marker";
+      const isFirst = initialLoad.current;
       el.style.cssText = `
         width: 36px; height: 36px;
         background: ${CATEGORY_COLORS[activity.category] || "#E8935A"};
@@ -102,9 +120,7 @@ export default function ItineraryMap({ activities, activeActivityId, onActivityC
         box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         display: flex; align-items: center; justify-content: center;
         transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
-        animation: markerDrop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
-        animation-delay: ${index * 120}ms;
-        opacity: 0;
+        ${isFirst ? `animation: markerDrop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; animation-delay: ${index * 120}ms; opacity: 0;` : 'opacity: 1;'}
       `;
 
       const label = document.createElement("span");
@@ -121,7 +137,7 @@ export default function ItineraryMap({ activities, activeActivityId, onActivityC
       `;
       el.appendChild(label);
 
-      el.addEventListener("click", () => onActivityClick?.(activity.id));
+      el.addEventListener("click", () => onClickRef.current?.(activity.id));
       el.addEventListener("mouseenter", () => {
         el.style.transform = "rotate(-45deg) scale(1.2)";
         el.style.boxShadow = "0 8px 24px rgba(0,0,0,0.35)";
@@ -191,6 +207,11 @@ export default function ItineraryMap({ activities, activeActivityId, onActivityC
       );
       map.current.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 1000 });
     }
+
+    // After the first paint, disable drop animation for subsequent re-adds
+    if (initialLoad.current) {
+      initialLoad.current = false;
+    }
   };
 
   useEffect(() => {
@@ -204,9 +225,10 @@ export default function ItineraryMap({ activities, activeActivityId, onActivityC
   }, [activities]);
 
   useEffect(() => {
+    const acts = activitiesRef.current;
     markers.current.forEach((marker, i) => {
       const el = marker.getElement();
-      if (activities[i]?.id === activeActivityId) {
+      if (acts[i]?.id === activeActivityId) {
         el.style.transform = "rotate(-45deg) scale(1.3)";
         el.style.zIndex = "10";
         marker.togglePopup();

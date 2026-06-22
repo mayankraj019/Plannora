@@ -234,3 +234,79 @@
   from { opacity: 0; transform: scale(0.8) translateY(10px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
+
+/* ════════════════ TRAVEL MODE ════════════════ */
+
+.travel-mode-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #080D1A;
+  /* Prevent iOS Safari overscroll / pull-to-refresh */
+  touch-action: none;
+  overscroll-behavior: none;
+  /* Support notched devices */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.travel-mode-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.25);
+  animation: travelPulse 2s ease-out infinite;
+  z-index: 1;
+}
+
+.travel-mode-user-dot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.travel-mode-glow {
+  box-shadow: 0 0 8px 3px rgba(255, 140, 66, 0.6);
+  animation: travelGlow 1.5s ease-in-out infinite alternate;
+}
+
+.travel-mode-eta-panel {
+  background: rgba(10, 15, 28, 0.92);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 140, 66, 0.08) inset;
+}
+
+/* Compact ETA panel on small screens */
+@media (max-width: 480px) {
+  .travel-mode-eta-panel {
+    padding: 14px;
+    border-radius: 16px;
+  }
+}
+
+@keyframes travelPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes travelGlow {
+  0%   { box-shadow: 0 0 6px 2px rgba(255, 140, 66, 0.4); }
+  100% { box-shadow: 0 0 12px 5px rgba(255, 140, 66, 0.7); }
+}
