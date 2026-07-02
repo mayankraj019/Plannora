@@ -29,7 +29,7 @@ Provide tailored advice based on this trip context if they ask about it.`;
 
     const geminiModel = genAI.getGenerativeModel(
       {
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         systemInstruction: contextStr,
         generationConfig: {
           temperature: 0.7,
