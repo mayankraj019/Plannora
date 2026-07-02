@@ -50,7 +50,10 @@ export default function TravelModeMap({
   const markers = useRef<maptilersdk.Marker[]>([]);
   const userMarker = useRef<maptilersdk.Marker | null>(null);
   const activityRef = useRef(activities);
-  activityRef.current = activities;
+
+  useEffect(() => {
+    activityRef.current = activities;
+  }, [activities]);
 
   // Initialise map
   useEffect(() => {
@@ -76,7 +79,7 @@ export default function TravelModeMap({
   }, []);
 
   // ── Add activity markers ──
-  const addMarkers = useCallback(() => {
+  const addMarkers = () => {
     if (!map.current) return;
 
     // Clear old markers
@@ -146,7 +149,7 @@ export default function TravelModeMap({
       if (isSelected) marker.togglePopup();
       markers.current.push(marker);
     });
-  }, [activities, selectedActivity, onActivityClick]);
+  };
 
   // Redraw markers when activities or selection changes
   useEffect(() => {
@@ -156,7 +159,7 @@ export default function TravelModeMap({
     } else {
       map.current.once("load", addMarkers);
     }
-  }, [activities, selectedActivity, addMarkers]);
+  }, [activities, selectedActivity, onActivityClick]);
 
   // ── User location blue dot ──
   useEffect(() => {

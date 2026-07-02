@@ -52,6 +52,34 @@ export default function TripPage() {
   const [travelModeActive, setTravelModeActive] = useState(false);
   const { step, setStep, currentItinerary, updateDay, addActivity, deleteActivity, language } = usePlannerStore();
 
+  // Extract all activities and restaurants for the map
+  // Memoised so that ItineraryMap's useEffect([activities]) doesn't fire on every re-render
+  const allActivities = useMemo(
+    () => currentItinerary?.days?.flatMap((day: any) => day.activities) || [],
+    [currentItinerary?.days]
+  );
+  const mapMarkers = useMemo(
+    () => [
+      ...allActivities.map((a: any) => ({ ...a, type: 'activity' })),
+      ...(currentItinerary?.recommendedRestaurants || currentItinerary?.restaurantRecommendations || []).map((r: any, i: number) => ({
+        ...r,
+        id: `rest_${i}`,
+        category: 'food',
+        type: 'restaurant',
+        time: "🍽️"
+      })),
+      ...(currentItinerary?.mustSeeAttractions || []).map((att: any, i: number) => ({
+        ...att,
+        id: `att_${i}`,
+        category: 'attraction',
+        type: 'attraction',
+        time: "🌟",
+        location: att.name
+      }))
+    ],
+    [allActivities, currentItinerary?.recommendedRestaurants, currentItinerary?.restaurantRecommendations, currentItinerary?.mustSeeAttractions]
+  );
+
   if (!currentItinerary) {
     return (
       <div className="min-h-screen bg-ivory dark:bg-[#0A0F1C] flex items-center justify-center font-body">
@@ -142,34 +170,6 @@ export default function TripPage() {
       setRegeneratingDay(null);
     }
   };
-
-  // Extract all activities and restaurants for the map
-  // Memoised so that ItineraryMap's useEffect([activities]) doesn't fire on every re-render
-  const allActivities = useMemo(
-    () => currentItinerary.days?.flatMap((day: any) => day.activities) || [],
-    [currentItinerary.days]
-  );
-  const mapMarkers = useMemo(
-    () => [
-      ...allActivities.map((a: any) => ({ ...a, type: 'activity' })),
-      ...(currentItinerary.recommendedRestaurants || currentItinerary.restaurantRecommendations || []).map((r: any, i: number) => ({
-        ...r,
-        id: `rest_${i}`,
-        category: 'food',
-        type: 'restaurant',
-        time: "🍽️"
-      })),
-      ...(currentItinerary.mustSeeAttractions || []).map((att: any, i: number) => ({
-        ...att,
-        id: `att_${i}`,
-        category: 'attraction',
-        type: 'attraction',
-        time: "🌟",
-        location: att.name
-      }))
-    ],
-    [allActivities, currentItinerary.recommendedRestaurants, currentItinerary.restaurantRecommendations, currentItinerary.mustSeeAttractions]
-  );
 
   // ALWAYS use geocoded destinationCoordinates first — this is set client-side during generation
   const mapCenter = (

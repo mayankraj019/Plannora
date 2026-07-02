@@ -5,7 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useState, useEffect, useRef, useCallback, type ElementType } from "react";
 import { useAuthStore } from "@/store/authStore";
-import { supabase } from "@/lib/supabase";
+import { useClerk } from "@clerk/nextjs";
 import { ArrowRight, MapPin, Globe, Sparkles, Loader2, Zap, Map, Clock, Users, Star, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
@@ -241,7 +241,8 @@ export default function LandingPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const handleSignOut = async () => { await supabase.auth.signOut(); };
+  const { signOut } = useClerk();
+  const handleSignOut = async () => { await signOut(); };
 
   return (
     <div className="relative min-h-screen bg-[#050A18] text-ivory overflow-hidden font-body" onMouseMove={handleMouseMove}>

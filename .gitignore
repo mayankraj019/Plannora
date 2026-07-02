@@ -48,3 +48,6 @@ next-env.d.ts
 .gemini/
 .antigravity/
 
+
+# clerk configuration (can include secrets)
+/.clerk/

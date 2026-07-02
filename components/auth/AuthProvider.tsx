@@ -1,56 +1,55 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
-
-// Helper: resolves after `ms` milliseconds
-const timeout = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+import { usePathname, useRouter } from "next/navigation";
+import { useUser, useAuth } from "@clerk/nextjs";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, clearUser } = useAuthStore();
-  const [loading, setLoading] = useState(true);
+  const { user: clerkUser, isLoaded: userLoaded } = useUser();
+  const { isLoaded: authLoaded } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
 
+  const loading = !userLoaded || !authLoaded;
+
+  // Sync Clerk user session with global Zustand authStore
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Race: auth fetch vs 3-second timeout so the page never stays blank
-        const result = await Promise.race([
-          supabase.auth.getSession(),
-          timeout(3000).then(() => null),
-        ]);
-
-        if (result && result.data?.session) {
-          setUser(result.data.session.user, result.data.session);
-        } else {
-          clearUser();
-        }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
+    if (userLoaded && authLoaded) {
+      if (clerkUser) {
+        setUser(
+          {
+            id: clerkUser.id,
+            email: clerkUser.primaryEmailAddress?.emailAddress || "",
+            email_confirmed_at: new Date().toISOString(),
+          } as any,
+          {} as any
+        );
+      } else {
         clearUser();
-      } finally {
-        setLoading(false);
       }
-    };
+    }
+  }, [clerkUser, userLoaded, authLoaded, setUser, clearUser]);
 
-    initializeAuth();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session) {
-          setUser(session.user, session);
-        } else {
-          clearUser();
-        }
+  // Client-side redirection for authenticated users visiting auth routes
+  useEffect(() => {
+    if (!loading) {
+      const isAuthRoute = pathname ? pathname.startsWith("/auth") : false;
+      if (clerkUser && isAuthRoute) {
+        router.push("/");
       }
-    );
+    }
+  }, [clerkUser, loading, pathname, router]);
 
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [setUser, clearUser]);
+  const isAuthRoute = pathname ? pathname.startsWith("/auth") : false;
 
   if (loading) {
+    return <div className="min-h-screen bg-[#050A18]" />;
+  }
+
+  // Prevent flash of auth page if user is logged in
+  if (clerkUser && isAuthRoute) {
     return <div className="min-h-screen bg-[#050A18]" />;
   }
 

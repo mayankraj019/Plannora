@@ -38,9 +38,15 @@ export default function ItineraryMap({ activities, activeActivityId, onActivityC
   const initialLoad = useRef(true);
   // Keep latest values in refs so addMarkersAndRoutes never uses stale closures
   const activitiesRef = useRef(activities);
-  activitiesRef.current = activities;
   const onClickRef = useRef(onActivityClick);
-  onClickRef.current = onActivityClick;
+
+  useEffect(() => {
+    activitiesRef.current = activities;
+  }, [activities]);
+
+  useEffect(() => {
+    onClickRef.current = onActivityClick;
+  }, [onActivityClick]);
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
