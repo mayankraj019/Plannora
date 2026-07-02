@@ -87,9 +87,9 @@ export default function PlanWizard() {
   };
 
   return (
-    <div className="min-h-screen bg-ivory dark:bg-midnight text-midnight dark:text-ivory pt-24 pb-12 px-6 flex flex-col items-center font-body">
+    <div className="min-h-screen bg-ivory dark:bg-midnight text-midnight dark:text-ivory pt-12 sm:pt-24 pb-8 sm:pb-12 px-4 sm:px-6 flex flex-col items-center font-body">
       {/* Progress Bar */}
-      <div className="w-full max-w-2xl mb-12">
+      <div className="w-full max-w-2xl mb-6 sm:mb-12">
         <div className="flex justify-between text-sm font-medium mb-2 text-midnight/60 dark:text-ivory/60">
           <span>Step {step} of 7</span>
           <span>{["Language", "Destination", "Dates", "Companions", "Vibe", "Budget", "Details"][step - 1]}</span>
@@ -121,7 +121,7 @@ export default function PlanWizard() {
           >
             {step === 1 && (
               <div className="flex flex-col gap-6">
-                <h2 className="text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber to-coral">Choose your language</h2>
+                <h2 className="text-2xl sm:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber to-coral">Choose your language</h2>
                 <p className="text-midnight/60 dark:text-ivory/60">Your itinerary and Nora will speak in this language.</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
                   {languages.map((lang) => (
@@ -144,7 +144,7 @@ export default function PlanWizard() {
 
             {step === 2 && (
               <div className="flex flex-col gap-6 relative">
-                <h2 className="text-4xl font-display font-bold">Where are you heading?</h2>
+                <h2 className="text-2xl sm:text-4xl font-display font-bold">Where are you heading?</h2>
                 <p className="text-midnight/60 dark:text-ivory/60">Search for a city, region, or country.</p>
                 <div className="relative mt-4">
                   <MapPin className="absolute left-4 top-4 text-amber w-6 h-6" />
@@ -187,7 +187,7 @@ export default function PlanWizard() {
 
             {step === 3 && (
               <div className="flex flex-col gap-6">
-                <h2 className="text-4xl font-display font-bold">When is your trip?</h2>
+                <h2 className="text-2xl sm:text-4xl font-display font-bold">When is your trip?</h2>
                 <div className="mt-4 border-2 border-amber/20 rounded-xl bg-ivory/30 dark:bg-midnight/50 overflow-x-auto w-full max-w-full flex justify-start sm:justify-center p-2">
                   <DayPicker
                     mode="range"
@@ -201,7 +201,7 @@ export default function PlanWizard() {
 
             {step === 4 && (
               <div className="flex flex-col gap-6">
-                <h2 className="text-4xl font-display font-bold">Who's traveling?</h2>
+                <h2 className="text-2xl sm:text-4xl font-display font-bold">Who's traveling?</h2>
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   {["solo", "family", "couple", "group"].map(comp => (
                     <button 
@@ -219,7 +219,7 @@ export default function PlanWizard() {
 
             {step === 5 && (
               <div className="flex flex-col gap-6">
-                <h2 className="text-4xl font-display font-bold">What's the vibe?</h2>
+                <h2 className="text-2xl sm:text-4xl font-display font-bold">What's the vibe?</h2>
                 <p className="text-midnight/60 dark:text-ivory/60">Select up to 3 themes.</p>
                 <div className="flex flex-wrap gap-3 mt-4">
                   {["Beach", "Adventure", "Culture", "Food", "Shopping", "Nature", "Romantic", "Wellness"].map(vibe => {
@@ -260,7 +260,7 @@ export default function PlanWizard() {
 
             {step === 7 && (
               <div className="flex flex-col gap-6">
-                <h2 className="text-4xl font-display font-bold">Any final details?</h2>
+                <h2 className="text-2xl sm:text-4xl font-display font-bold">Any final details?</h2>
                 <textarea 
                   value={preferences.mustSee || ""}
                   onChange={(e) => setPreferences({ mustSee: e.target.value })}

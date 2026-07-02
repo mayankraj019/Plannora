@@ -165,7 +165,7 @@ export default function NoraChat() {
   };
 
   return (
-    <div className="fixed bottom-24 right-6 z-50 font-body">
+    <div className="fixed bottom-6 md:bottom-24 right-4 md:right-6 z-50 font-body">
       <AnimatePresence>
         {isOpen && (
           <motion.div
