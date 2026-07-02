@@ -73,7 +73,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050A18] text-[#E8F0FF] flex flex-col items-center justify-center font-body relative overflow-hidden px-4 md:px-6">
+    <div className="min-h-[100dvh] bg-[#050A18] text-[#E8F0FF] flex flex-col items-center justify-center font-body relative overflow-y-auto py-10 px-4 md:px-6">
       {/* Ambient background */}
       <div className="absolute top-[-20%] left-[-20%] w-[500px] h-[500px] bg-[#FF8C42]/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-20%] w-[500px] h-[500px] bg-[#7B2FBE]/5 rounded-full blur-[120px] pointer-events-none" />
@@ -85,7 +85,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md plannora-glass border border-cyan-500/10 shadow-2xl rounded-3xl p-6 md:p-8 lg:p-10 relative z-10"
+        className="w-full max-w-md plannora-glass border border-cyan-500/10 shadow-2xl rounded-2xl md:rounded-3xl p-5 sm:p-6 md:p-8 lg:p-10 relative z-10"
       >
         {/* Brand Logo & Name */}
         <div className="flex justify-center mb-6">
