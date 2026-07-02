@@ -87,7 +87,7 @@ export default function PlanWizard() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-ivory dark:bg-midnight text-midnight dark:text-ivory py-8 px-4 sm:px-6 flex flex-col items-center justify-center font-body">
+    <div className="min-h-[100dvh] w-full bg-ivory dark:bg-midnight text-midnight dark:text-ivory py-8 px-4 sm:px-6 flex flex-col items-center justify-center font-body overflow-x-hidden relative">
       {/* Progress Bar */}
       <div className="w-full max-w-2xl mb-6 sm:mb-12">
         <div className="flex justify-between text-sm font-medium mb-2 text-midnight/60 dark:text-ivory/60">
