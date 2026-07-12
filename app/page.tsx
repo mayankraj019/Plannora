@@ -401,9 +401,6 @@ export default function LandingPage() {
                 </motion.span>
               </motion.button>
             </Link>
-            <Link href="/auth/login" className="text-sm text-ivory/50 hover:text-ivory transition-colors font-mono underline underline-offset-4">
-              Sign in →
-            </Link>
           </motion.div>
 
           {/* Stats row */}
